@@ -12,3 +12,4 @@ export type UploadStatus = imageBuilderComponents["schemas"]["UploadStatus"];
 export type SourceResponse = provisioningComponents["schemas"]["v1.SourceResponse"];
 export type SourceUploadInfoResponse = provisioningComponents["schemas"]["v1.SourceUploadInfoResponse"]
 export type RepositoryCollectionResponse = contentSourcesComponents["schemas"]["api.RepositoryCollectionResponse"]
+export type Distributions = imageBuilderComponents["schemas"]["Distributions"];
