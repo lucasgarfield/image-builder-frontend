@@ -15,7 +15,7 @@ const ShareToRegionsModal = () => {
 
   const { composeId } = useParams();
 
-  const handleToggle = (isOpen) => setIsOpen(isOpen);
+  const handleToggle = (isOpen: boolean) => setIsOpen(isOpen);
 
   const handleEscapePress = () => {
     if (isOpen) {

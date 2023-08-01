@@ -39,6 +39,8 @@ const webpackProxy = {
 };
 
 const { config: webpackConfig, plugins } = config({
+  localChrome: '/home/lgarfield/dev/insights-chrome/build/',
+  proxyVerbose: true,
   rootFolder: resolve(__dirname, '../'),
   debug: true,
   useFileHash: false,

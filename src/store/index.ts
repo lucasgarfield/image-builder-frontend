@@ -1,12 +1,17 @@
 import { notificationsReducer } from '@redhat-cloud-services/frontend-components-notifications/redux';
-import { configureStore } from '@reduxjs/toolkit';
+import {
+  AnyAction,
+  MiddlewareArray,
+  ThunkDispatch,
+  configureStore,
+} from '@reduxjs/toolkit';
 import promiseMiddleware from 'redux-promise-middleware';
 
 import clonesSlice from './clonesSlice';
 import composesSlice from './composesSlice';
 import { contentSourcesApi } from './contentSourcesApi';
 import { edgeApi } from './edgeApi';
-import { imageBuilderApi } from './imageBuilderApi';
+import { imageBuilderApi } from './enhancedImageBuilderApi';
 import { provisioningApi } from './provisioningApi';
 import { rhsmApi } from './rhsmApi';
 
@@ -21,13 +26,19 @@ export const reducer = {
   notifications: notificationsReducer,
 };
 
-export const middleware = (getDefaultMiddleware) =>
-  getDefaultMiddleware()
-    .concat(promiseMiddleware)
-    .concat(contentSourcesApi.middleware)
-    .concat(edgeApi.middleware)
-    .concat(imageBuilderApi.middleware)
-    .concat(rhsmApi.middleware)
-    .concat(provisioningApi.middleware);
+export const middleware = (getDefaultMiddleware: Function) =>
+  getDefaultMiddleware().concat(
+    promiseMiddleware,
+    contentSourcesApi.middleware,
+    imageBuilderApi.middleware,
+    rhsmApi.middleware,
+    provisioningApi.middleware
+  );
 
 export const store = configureStore({ reducer, middleware });
+
+export type RootState = ReturnType<typeof store.getState>;
+
+// TODO explain that this isn't working so we have the workaround
+//export type AppDispatch = typeof store.dispatch;
+export type AppDispatch = ThunkDispatch<RootState, null, AnyAction>;

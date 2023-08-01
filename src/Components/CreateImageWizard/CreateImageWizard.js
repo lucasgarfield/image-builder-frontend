@@ -26,10 +26,11 @@ import {
 } from './validators';
 
 import './CreateImageWizard.scss';
-import api from '../../api';
 import { UNIT_GIB, UNIT_KIB, UNIT_MIB } from '../../constants';
-import { composeAdded } from '../../store/composesSlice';
-import { useGetArchitecturesQuery } from '../../store/imageBuilderApi';
+import {
+  useComposeImageMutation,
+  useGetArchitecturesQuery,
+} from '../../store/imageBuilderApi';
 import isRhel from '../../Utilities/isRhel';
 import { resolveRelPath } from '../../Utilities/path';
 import { useGetEnvironment } from '../../Utilities/useGetEnvironment';
@@ -510,6 +511,7 @@ const formStepHistory = (composeRequest, contentSourcesEnabled) => {
 };
 
 const CreateImageWizard = () => {
+  const [composeImage] = useComposeImageMutation();
   const dispatch = useDispatch();
   const navigate = useNavigate();
   // composeId is an optional param that is used for Recreate image
@@ -565,25 +567,15 @@ const CreateImageWizard = () => {
   return (
     <ImageCreator
       onClose={handleClose}
-      onSubmit={({ values, setIsSaving }) => {
+      onSubmit={async ({ values, setIsSaving }) => {
         setIsSaving(() => true);
         const requests = onSave(values);
-        Promise.all(
-          requests.map((request) =>
-            api.composeImage(request).then((response) => {
-              dispatch(
-                composeAdded({
-                  compose: {
-                    ...response,
-                    request,
-                    created_at: currentDate.toISOString(),
-                    image_status: { status: 'pending' },
-                  },
-                  insert: true,
-                })
-              );
-            })
-          )
+        // https://redux-toolkit.js.org/rtk-query/usage/mutations#frequently-used-mutation-hook-return-values
+        // If you want to immediately access the result of a mutation, you need to chain `.unwrap()`
+        // if you actually want the payload or to catch the error.
+        // We do this so we can dispatch the appropriate notification (success or failure).
+        await Promise.all(
+          requests.map((request) => composeImage(request).unwrap())
         )
           .then(() => {
             navigate(resolveRelPath(''));

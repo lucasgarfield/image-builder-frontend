@@ -6,7 +6,7 @@ import { BrowserRouter } from 'react-router-dom';
 
 import api from '../../../api.js';
 import { ImageBuildStatus } from '../../../Components/ImagesTable/ImageBuildStatus';
-import ImageLink from '../../../Components/ImagesTable/ImageLink';
+import CloudInstance from '../../../Components/ImagesTable/ImageLink';
 import Target from '../../../Components/ImagesTable/Target';
 import '@testing-library/jest-dom';
 import {
@@ -126,7 +126,7 @@ describe('Images Table', () => {
       } else {
         renderWithProvider(
           <BrowserRouter>
-            <ImageLink imageId={compose.id} isInClonesTable={false} />
+            <CloudInstance imageId={compose.id} isInClonesTable={false} />
           </BrowserRouter>,
           testElement,
           state

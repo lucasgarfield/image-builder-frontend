@@ -27,7 +27,8 @@ export const AWS_REGIONS = [
   {
     description: 'US East (N. Virginia)',
     value: 'us-east-1',
-    disableRegion: false,
+    // disable default region
+    disableRegion: true,
   },
   {
     description: 'US West (N. California)',
