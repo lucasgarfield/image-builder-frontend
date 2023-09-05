@@ -231,45 +231,55 @@ const ImagesTable = () => {
   );
 };
 
-type ImagesTableRowTypes = {
+type ImagesTableRowPropTypes = {
   compose: ComposesResponseItem;
   rowIndex: number;
 };
 
-const ImagesTableRow = ({ compose, rowIndex }: ImagesTableRowTypes) => {
+const ImagesTableRow = ({ compose, rowIndex }: ImagesTableRowPropTypes) => {
+  const { data: status } = useGetComposeStatusQuery({
+    composeId: compose.id,
+  });
+
   const type = compose.request.image_requests[0].upload_request.type;
 
   switch (type) {
     case 'aws':
-      return <AwsRow compose={compose} rowIndex={rowIndex} />;
+      return <AwsRow compose={compose} status={status} rowIndex={rowIndex} />;
     case 'gcp':
-      return <GcpRow compose={compose} rowIndex={rowIndex} />;
+      return <GcpRow compose={compose} status={status} rowIndex={rowIndex} />;
     case 'azure':
-      return <AzureRow compose={compose} rowIndex={rowIndex} />;
+      return <AzureRow compose={compose} status={status} rowIndex={rowIndex} />;
     case 'aws.s3':
-      return <AwsS3Row compose={compose} rowIndex={rowIndex} />;
+      return <AwsS3Row compose={compose} status={status} rowIndex={rowIndex} />;
     default:
       // TODO empty row here?
       return <Skeleton />;
   }
 };
 
-const GcpRow = ({ compose, rowIndex }: ImagesTableRowTypes) => {
+type GcpRowPropTypes = {
+  compose: ComposesResponseItem;
+  status: ComposeStatus | undefined;
+  rowIndex: number;
+};
+
+const GcpRow = ({ compose, status, rowIndex }: GcpRowPropTypes) => {
   const details = <GcpDetails compose={compose} />;
   const instance = <CloudInstance compose={compose} />;
-  const status = <CloudStatus compose={compose} />;
+  const statusX = <CloudStatus compose={compose} />;
   return (
     <Row
       compose={compose}
       rowIndex={rowIndex}
       details={details}
-      status={status}
+      status={statusX}
       instance={instance}
     />
   );
 };
 
-const AzureRow = ({ compose, rowIndex }: ImagesTableRowTypes) => {
+const AzureRow = ({ compose, rowIndex }: ImagesTableRowPropTypes) => {
   const details = <AzureDetails compose={compose} />;
   const instance = <CloudInstance compose={compose} />;
   const status = <CloudStatus compose={compose} />;
@@ -285,7 +295,7 @@ const AzureRow = ({ compose, rowIndex }: ImagesTableRowTypes) => {
   );
 };
 
-const AwsS3Row = ({ compose, rowIndex }: ImagesTableRowTypes) => {
+const AwsS3Row = ({ compose, rowIndex }: ImagesTableRowPropTypes) => {
   const { data } = useGetComposeStatusQuery({ composeId: compose.id });
 
   const expirationTime = hoursToExpiration(compose.created_at);
@@ -314,7 +324,7 @@ const AwsS3Row = ({ compose, rowIndex }: ImagesTableRowTypes) => {
   );
 };
 
-const AwsRow = ({ compose, rowIndex }: ImagesTableRowTypes) => {
+const AwsRow = ({ compose,, status, rowIndex }: ImagesTableRowPropTypes) => {
   const navigate = useNavigate();
 
   const { data: composeStatus } = useGetComposeStatusQuery({

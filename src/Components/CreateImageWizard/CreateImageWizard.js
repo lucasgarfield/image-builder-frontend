@@ -575,7 +575,9 @@ const CreateImageWizard = () => {
         // if you actually want the payload or to catch the error.
         // We do this so we can dispatch the appropriate notification (success or failure).
         await Promise.all(
-          requests.map((request) => composeImage(request).unwrap())
+          requests.map((composeRequest) =>
+            composeImage({ composeRequest }).unwrap()
+          )
         )
           .then(() => {
             navigate(resolveRelPath(''));

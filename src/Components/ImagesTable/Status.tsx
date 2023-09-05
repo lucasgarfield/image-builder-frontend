@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 
 import './ImageBuildStatus.scss';
 import {
@@ -146,12 +146,17 @@ export const AwsStatus = ({ compose, clones }: AwsStatusPropTypes) => {
 
 type CloudStatusPropTypes = {
   compose: ComposesResponseItem;
+  status: ComposeStatus;
 };
 
-export const CloudStatus = ({ compose }: CloudStatusPropTypes) => {
-  const { data, isSuccess } = useGetComposeStatusQuery({
-    composeId: compose.id,
-  });
+export const CloudStatus = ({ compose, status }: CloudStatusPropTypes) => {
+  useEffect(() => {
+    if (status === 'success' || status === 'failure') {
+      setPollingInterval(0);
+    } else {
+      setPollingInterval(8000);
+    }
+  }, [setPollingInterval, status]);
 
   if (!isSuccess) {
     return <Skeleton width="50%" />;
