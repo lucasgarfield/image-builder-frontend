@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 
 import './ImageBuildStatus.scss';
 import {
@@ -98,7 +98,7 @@ type ReducedClonesByRegion = {
 
 type AwsStatusPropTypes = {
   compose: ComposesResponseItem;
-  clones: ReducedClonesByRegion;
+  clones: ReducedClonesByRegion | undefined;
 };
 
 export const AwsStatus = ({ compose, clones }: AwsStatusPropTypes) => {
@@ -146,38 +146,37 @@ export const AwsStatus = ({ compose, clones }: AwsStatusPropTypes) => {
 
 type CloudStatusPropTypes = {
   compose: ComposesResponseItem;
-  status: ComposeStatus;
 };
 
-export const CloudStatus = ({ compose, status }: CloudStatusPropTypes) => {
-  useEffect(() => {
-    if (status === 'success' || status === 'failure') {
-      setPollingInterval(0);
-    } else {
-      setPollingInterval(8000);
-    }
-  }, [setPollingInterval, status]);
+export const CloudStatus = ({ compose }: CloudStatusPropTypes) => {
+  const { data, isError, isFetching, isSuccess } = useGetComposeStatusQuery({
+    composeId: compose.id,
+  });
 
-  if (!isSuccess) {
+  if (isError) {
+    return <></>;
+  } else if (isFetching) {
     return <Skeleton width="50%" />;
-  }
-
-  switch (data.image_status.status) {
-    case 'failure':
-      return (
-        <ErrorStatus
-          icon={statuses['failure'].icon}
-          text={statuses['failure'].text}
-          reason={data.image_status.error?.reason || ''}
-        />
-      );
-    default:
-      return (
-        <Status
-          icon={statuses[data.image_status.status].icon}
-          text={statuses[data.image_status.status].text}
-        />
-      );
+  } else if (isSuccess) {
+    switch (data.image_status.status) {
+      case 'failure':
+        return (
+          <ErrorStatus
+            icon={statuses['failure'].icon}
+            text={statuses['failure'].text}
+            reason={data.image_status.error?.reason || ''}
+          />
+        );
+      default:
+        return (
+          <Status
+            icon={statuses[data.image_status.status].icon}
+            text={statuses[data.image_status.status].text}
+          />
+        );
+    }
+  } else {
+    return <></>;
   }
 };
 

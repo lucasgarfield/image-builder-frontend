@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 
 import {
   Button,
@@ -46,14 +46,13 @@ import { AwsTarget, Target } from './Target';
 import { AWS_S3_EXPIRATION_TIME_IN_HOURS } from '../../constants';
 import { useGetCloneStatusesQuery } from '../../store/hooks';
 import {
-  ClonesResponseItem,
   ComposesResponseItem,
   ComposeStatus,
-  UploadStatus,
   useGetComposeClonesQuery,
   useGetComposesQuery,
   useGetComposeStatusQuery,
 } from '../../store/imageBuilderApi';
+import { ClonesByRegion, ReducedClonesByRegion } from '../../store/types';
 import { resolveRelPath } from '../../Utilities/path';
 import {
   hoursToExpiration,
@@ -73,10 +72,6 @@ const ImagesTable = () => {
 
   const onPerPageSelect: OnSetPage = (_, perPage) => setPerPage(perPage);
 
-  // the state.page is not an index so must be reduced by 1 get the starting index
-  const itemsStartInclusive = (page - 1) * perPage;
-  const itemsEndExclusive = itemsStartInclusive + perPage;
-
   // TODO nope fix this
   if (!isSuccess) {
     return <></>;
@@ -87,6 +82,7 @@ const ImagesTable = () => {
 
   return (
     <>
+      {!isSuccess && <></>}
       {(data.meta.count === 0 && (
         <EmptyState variant={EmptyStateVariant.large} data-testid="empty-state">
           <EmptyStateIcon icon={PlusCircleIcon} />
@@ -193,17 +189,15 @@ const ImagesTable = () => {
                 <Th />
               </Tr>
             </Thead>
-            {composes
-              .slice(itemsStartInclusive, itemsEndExclusive)
-              .map((compose, rowIndex) => {
-                return (
-                  <ImagesTableRow
-                    compose={compose}
-                    rowIndex={rowIndex}
-                    key={compose.id}
-                  />
-                );
-              })}
+            {composes.map((compose, rowIndex) => {
+              return (
+                <ImagesTableRow
+                  compose={compose}
+                  rowIndex={rowIndex}
+                  key={compose.id}
+                />
+              );
+            })}
           </TableComposable>
           <Toolbar className="pf-u-mb-xl">
             <ToolbarContent>
@@ -237,49 +231,72 @@ type ImagesTableRowPropTypes = {
 };
 
 const ImagesTableRow = ({ compose, rowIndex }: ImagesTableRowPropTypes) => {
-  const { data: status } = useGetComposeStatusQuery({
-    composeId: compose.id,
-  });
+  const [pollingInterval, setPollingInterval] = useState(8000);
+
+  const { data: composeStatus, isLoading } = useGetComposeStatusQuery(
+    {
+      composeId: compose.id,
+    },
+    { pollingInterval: pollingInterval }
+  );
+
+  useEffect(() => {
+    if (
+      composeStatus?.image_status.status === 'success' ||
+      composeStatus?.image_status.status === 'failure'
+    ) {
+      setPollingInterval(0);
+    } else {
+      setPollingInterval(8000);
+    }
+  }, [setPollingInterval, composeStatus]);
+
+  if (isLoading) {
+    return <LoadingRow compose={compose} rowIndex={rowIndex} />;
+  }
 
   const type = compose.request.image_requests[0].upload_request.type;
 
   switch (type) {
-    case 'aws':
-      return <AwsRow compose={compose} status={status} rowIndex={rowIndex} />;
+    // case 'aws':
+    //   return <AwsRow compose={compose} rowIndex={rowIndex} />;
     case 'gcp':
-      return <GcpRow compose={compose} status={status} rowIndex={rowIndex} />;
+      return <GcpRow compose={compose} rowIndex={rowIndex} />;
     case 'azure':
-      return <AzureRow compose={compose} status={status} rowIndex={rowIndex} />;
-    case 'aws.s3':
-      return <AwsS3Row compose={compose} status={status} rowIndex={rowIndex} />;
+      return <AzureRow compose={compose} rowIndex={rowIndex} />;
+    // case 'aws.s3':
+    //   return <AwsS3Row compose={compose} rowIndex={rowIndex} />;
     default:
-      // TODO empty row here?
-      return <Skeleton />;
+      return <LoadingRow compose={compose} rowIndex={rowIndex} />;
   }
 };
 
 type GcpRowPropTypes = {
   compose: ComposesResponseItem;
-  status: ComposeStatus | undefined;
   rowIndex: number;
 };
 
-const GcpRow = ({ compose, status, rowIndex }: GcpRowPropTypes) => {
+const GcpRow = ({ compose, rowIndex }: GcpRowPropTypes) => {
   const details = <GcpDetails compose={compose} />;
   const instance = <CloudInstance compose={compose} />;
-  const statusX = <CloudStatus compose={compose} />;
+  const status = <CloudStatus compose={compose} />;
   return (
     <Row
       compose={compose}
       rowIndex={rowIndex}
       details={details}
-      status={statusX}
+      status={status}
       instance={instance}
     />
   );
 };
 
-const AzureRow = ({ compose, rowIndex }: ImagesTableRowPropTypes) => {
+type AzureRowPropTypes = {
+  compose: ComposesResponseItem;
+  rowIndex: number;
+};
+
+const AzureRow = ({ compose, rowIndex }: AzureRowPropTypes) => {
   const details = <AzureDetails compose={compose} />;
   const instance = <CloudInstance compose={compose} />;
   const status = <CloudStatus compose={compose} />;
@@ -295,16 +312,17 @@ const AzureRow = ({ compose, rowIndex }: ImagesTableRowPropTypes) => {
   );
 };
 
-const AwsS3Row = ({ compose, rowIndex }: ImagesTableRowPropTypes) => {
-  const { data } = useGetComposeStatusQuery({ composeId: compose.id });
+type AwsS3RowPropTypes = {
+  compose: ComposesResponseItem;
+  rowIndex: number;
+};
 
+const AwsS3Row = ({ compose, rowIndex }: AwsS3RowPropTypes) => {
   const expirationTime = hoursToExpiration(compose.created_at);
   const isExpired = expirationTime >= AWS_S3_EXPIRATION_TIME_IN_HOURS;
 
   const details = <AwsS3Details compose={compose} />;
-  const instance = (
-    <AwsS3Instance compose={compose} isExpired={isExpired} status={data} />
-  );
+  const instance = <AwsS3Instance compose={compose} isExpired={isExpired} />;
   const status = (
     <AwsS3Status
       compose={compose}
@@ -324,89 +342,77 @@ const AwsS3Row = ({ compose, rowIndex }: ImagesTableRowPropTypes) => {
   );
 };
 
-const AwsRow = ({ compose,, status, rowIndex }: ImagesTableRowPropTypes) => {
-  const navigate = useNavigate();
+type AwsRowPropTypes = {
+  compose: ComposesResponseItem;
+  rowIndex: number;
+};
 
+const AwsRow = ({ compose, rowIndex }: AwsRowPropTypes) => {
   const { data: composeStatus } = useGetComposeStatusQuery({
     composeId: compose.id,
   });
 
-  const { data, isSuccess } = useGetComposeClonesQuery({
-    composeId: compose.id,
-  });
+  const navigate = useNavigate();
+
+  const { data: clones, isSuccess: isSuccessClones } = useGetComposeClonesQuery(
+    {
+      composeId: compose.id,
+    }
+  );
 
   const statuses = useGetCloneStatusesQuery(
-    isSuccess ? data.data : [skipToken]
+    isSuccessClones ? clones.data : [skipToken]
   );
 
   const isSuccessStatuses = !statuses.find(
     (status) => status.isSuccess === false
   );
 
-  // TODO we don't want to early return, instead we want to render the row
-  // and just let the columns that depend on this have skeltons if it is
-  // undefined... the early return is making the aws rows appear slowly... the early return is making the aws rows appear slowly
-  if (!isSuccess || !isSuccessStatuses) {
-    return <></>;
-  }
+  const reducedClonesByRegion = useMemo(() => {
+    // Merge clones and their statuses
+    const clonesByRegion: ClonesByRegion = {};
 
-  // Merge clones and their statuses
-  type ClonesByRegion = {
-    [region: string]: Array<{
-      clone: ClonesResponseItem;
-      status: UploadStatus | undefined;
-    }>;
-  };
-
-  const clonesByRegion: ClonesByRegion = {};
-
-  data.data.forEach((clone, i) => {
-    const region = clone.request.region;
-    if (clonesByRegion[region]) {
-      clonesByRegion[region].push({ clone: clone, status: statuses[i].data });
-    } else {
-      clonesByRegion[region] = [{ clone: clone, status: statuses[i].data }];
-    }
-  });
-
-  type ReducedClonesByRegion = {
-    [region: string]: {
-      clone: ClonesResponseItem;
-      status: UploadStatus | undefined;
-    };
-  };
-
-  const reducingPriority = {
-    success: 4,
-    pending: 3,
-    running: 2,
-    failure: 1,
-  };
-
-  const reducedClonesByRegion: ReducedClonesByRegion = {};
-
-  for (const [region, clones] of Object.entries(clonesByRegion)) {
-    reducedClonesByRegion[region] = clones.reduce((current, accumulator) => {
-      const currentStatus = current.status?.status;
-      const currentPriority = currentStatus
-        ? reducingPriority[currentStatus]
-        : 0;
-      const accumulatorStatus = accumulator.status?.status;
-      const accumulatorPriority = accumulatorStatus
-        ? reducingPriority[accumulatorStatus]
-        : 0;
-
-      if (currentPriority > accumulatorPriority) {
-        return current;
+    clones.data.forEach((clone, i) => {
+      const region = clone.request.region;
+      if (clonesByRegion[region]) {
+        clonesByRegion[region].push({ clone: clone, status: statuses[i].data });
       } else {
-        return accumulator;
+        clonesByRegion[region] = [{ clone: clone, status: statuses[i].data }];
       }
-    }, clones[0]);
-  }
+    });
 
-  const numCloneRows = Object.entries(reducedClonesByRegion).length;
+    const reducingPriority = {
+      success: 4,
+      pending: 3,
+      running: 2,
+      failure: 1,
+    };
 
-  const target = <AwsTarget numCloneRows={numCloneRows} />;
+    const reducedClonesByRegion: ReducedClonesByRegion = {};
+
+    for (const [region, clones] of Object.entries(clonesByRegion)) {
+      reducedClonesByRegion[region] = clones.reduce((current, accumulator) => {
+        const currentStatus = current.status?.status;
+        const currentPriority = currentStatus
+          ? reducingPriority[currentStatus]
+          : 0;
+        const accumulatorStatus = accumulator.status?.status;
+        const accumulatorPriority = accumulatorStatus
+          ? reducingPriority[accumulatorStatus]
+          : 0;
+
+        if (currentPriority > accumulatorPriority) {
+          return current;
+        } else {
+          return accumulator;
+        }
+      }, clones[0]);
+    }
+
+    return reducedClonesByRegion;
+  }, [clones, statuses]);
+
+  const target = <AwsTarget clones={reducedClonesByRegion} />;
 
   const status = <AwsStatus compose={compose} clones={reducedClonesByRegion} />;
 
@@ -495,6 +501,52 @@ const Row = ({
       <Tr isExpanded={isExpanded}>
         <Td colSpan={8}>
           <ExpandableRowContent>{details}</ExpandableRowContent>
+        </Td>
+      </Tr>
+    </Tbody>
+  );
+};
+
+type LoadingRowPropTypes = {
+  compose: ComposesResponseItem;
+  rowIndex: any;
+};
+
+const LoadingRow = ({ compose, rowIndex }: LoadingRowPropTypes) => {
+  return (
+    <Tbody key={compose.id} isExpanded={false}>
+      <Tr className="no-bottom-border">
+        <Td
+          expand={{
+            rowIndex: rowIndex,
+            isExpanded: false,
+          }}
+        />
+        <Td dataLabel="Image name">
+          {compose.request.image_name || compose.id}
+        </Td>
+        <Td dataLabel="Created">
+          {timestampToDisplayString(compose.created_at)}
+        </Td>
+        <Td dataLabel="Release">
+          <Release release={compose.request.distribution} />
+        </Td>
+        <Td dataLabel="Target">
+          <Skeleton />
+        </Td>
+        <Td dataLabel="Status">
+          <Skeleton />
+        </Td>
+        <Td dataLabel="Instance">
+          <Skeleton />
+        </Td>
+        <Td>
+          <ActionsColumn isDisabled />
+        </Td>
+      </Tr>
+      <Tr>
+        <Td colSpan={8}>
+          <ExpandableRowContent />
         </Td>
       </Tr>
     </Tbody>

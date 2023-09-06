@@ -1,17 +1,21 @@
-import React, { Suspense, useState, useMemo } from 'react';
+import React, { useState } from 'react';
 
-import { Button, Modal, ModalVariant } from '@patternfly/react-core';
+import { Button, Modal, ModalVariant, Skeleton } from '@patternfly/react-core';
 import { useChrome } from '@redhat-cloud-services/frontend-components/useChrome';
 import { useLoadModule, useScalprum } from '@scalprum/react-core';
 import { useNavigate } from 'react-router-dom';
 
 import { MODAL_ANCHOR } from '../../constants';
 import {
-  ComposeStatus,
   ComposesResponseItem,
   ImageTypes,
   useGetComposeStatusQuery,
 } from '../../store/imageBuilderApi';
+import {
+  isAwsUploadRequestOptions,
+  isAwss3UploadStatus,
+  isGcpUploadRequestOptions,
+} from '../../store/types';
 import { resolveRelPath } from '../../Utilities/path';
 
 type CloudInstancePropTypes = {
@@ -20,18 +24,11 @@ type CloudInstancePropTypes = {
 
 export const CloudInstance = ({ compose }: CloudInstancePropTypes) => {
   const { initialized: chromeInitialized } = useChrome();
-
   const scalprum = useScalprum();
   const hasProvisioning = chromeInitialized && scalprum.config?.provisioning;
 
-  const { data: status } = useGetComposeStatusQuery({
-    composeId: compose.id,
-  });
-
-  if (status?.image_status.status !== 'success') return <></>;
-
   if (hasProvisioning) {
-    return <ProvisioningLink compose={compose} status={status} />;
+    return <ProvisioningLink compose={compose} />;
   } else {
     return <></>;
   }
@@ -39,72 +36,84 @@ export const CloudInstance = ({ compose }: CloudInstancePropTypes) => {
 
 type ProvisioningLinkPropTypes = {
   compose: ComposesResponseItem;
-  status: ComposeStatus;
 };
 
-const ProvisioningLink = ({ compose, status }: ProvisioningLinkPropTypes) => {
+const ProvisioningLink = ({ compose }: ProvisioningLinkPropTypes) => {
   const [wizardOpen, openWizard] = useState(false);
-  const [{ default: ProvisioningWizard }, error] = useLoadModule(
+  const [exposedScalprumModule, error] = useLoadModule(
     {
-      appName: 'provisioning', // optional
       scope: 'provisioning',
       module: './ProvisioningWizard',
-      // processor: (val) => val, // optional
     },
-    {},
     {}
   );
+  const { data, isError, isFetching, isSuccess } = useGetComposeStatusQuery({
+    composeId: compose.id,
+  });
 
-  const appendTo = useMemo(() => document.querySelector(MODAL_ANCHOR), []);
-
-  const provider = getImageProvider(compose);
-
-  if (error) {
-    return <>Error!</>;
-  }
-
-  return (
-    <Suspense fallback="loading...">
-      <Button variant="link" isInline onClick={() => openWizard(true)}>
+  if (isError || error || !exposedScalprumModule) {
+    return (
+      <Button variant="link" isInline isDisabled>
         Launch
       </Button>
-      {wizardOpen && (
-        <Modal
-          isOpen
-          hasNoBodyWrapper
-          appendTo={appendTo}
-          showClose={false}
-          variant={ModalVariant.large}
-          aria-label="Open launch wizard"
-        >
-          <ProvisioningWizard
-            onClose={() => openWizard(false)}
-            image={{
-              name: compose.image_name || compose.id,
-              id: compose.id,
-              architecture:
-                compose.request.image_requests[0].upload_request.options,
-              provider: provider,
-              sourceIDs:
-                compose.request.image_requests[0].upload_request?.options
-                  .share_with_sources,
-              accountIDs:
-                compose.request.image_requests[0].upload_request?.options
-                  .share_with_accounts,
-              uploadOptions:
-                compose.request.image_requests[0].upload_request.options,
-              uploadStatus: status.image_status.upload_status,
-              // For backward compatibility only, remove once Provisioning ready (deploys):
-              // https://github.com/RHEnVision/provisioning-frontend/pull/238
-              sourceId:
-                compose.request.image_requests[0].upload_request?.options
-                  .share_with_sources[0],
-            }}
-          />
-        </Modal>
-      )}
-    </Suspense>
-  );
+    );
+  } else if (isFetching) {
+    return <Skeleton />;
+  } else if (isSuccess) {
+    const appendTo = () => document.querySelector(MODAL_ANCHOR) as HTMLElement;
+    const ProvisioningWizard = exposedScalprumModule.default;
+    const provider = getImageProvider(compose);
+
+    const options = compose.request.image_requests[0].upload_request.options;
+
+    let sourceIds = undefined;
+    let accountIds = undefined;
+
+    if (isGcpUploadRequestOptions(options)) {
+      accountIds = options.share_with_accounts;
+    }
+
+    if (isAwsUploadRequestOptions(options)) {
+      accountIds = options.share_with_accounts;
+      sourceIds = options.share_with_sources;
+    }
+
+    return (
+      <>
+        <Button variant="link" isInline onClick={() => openWizard(true)}>
+          Launch
+        </Button>
+        {wizardOpen && (
+          <Modal
+            isOpen
+            hasNoBodyWrapper
+            appendTo={appendTo}
+            showClose={false}
+            variant={ModalVariant.large}
+            aria-label="Open launch wizard"
+          >
+            <ProvisioningWizard
+              onClose={() => openWizard(false)}
+              image={{
+                name: compose.image_name || compose.id,
+                id: compose.id,
+                architecture:
+                  compose.request.image_requests[0].upload_request.options,
+                provider: provider,
+                sourceIDs: sourceIds,
+                accountIDs: accountIds,
+                uploadOptions:
+                  compose.request.image_requests[0].upload_request.options,
+                uploadStatus: data.image_status.upload_status,
+              }}
+            />
+          </Modal>
+        )}
+      </>
+    );
+  } else {
+    return <></>;
+  }
 };
 
 const getImageProvider = (compose: ComposesResponseItem) => {
@@ -126,51 +135,84 @@ const getImageProvider = (compose: ComposesResponseItem) => {
 
 type AwsS3InstancePropTypes = {
   compose: ComposesResponseItem;
-  status: ComposeStatus | undefined;
   isExpired: boolean;
 };
 
 export const AwsS3Instance = ({
   compose,
-  status,
   isExpired,
 }: AwsS3InstancePropTypes) => {
+  const { data, isError, isFetching, isSuccess } = useGetComposeStatusQuery({
+    composeId: compose.id,
+  });
+
   const navigate = useNavigate();
 
   const fileExtensions: { [key in ImageTypes]: string } = {
-    vsphere: '.vmdk',
-    'vsphere-ova': '.ova',
+    aws: '',
+    azure: '',
+    'edge-commit': '',
+    'edge-installer': '',
+    gcp: '',
     'guest-image': '.qcow2',
     'image-installer': '.iso',
+    vsphere: '.vmdk',
+    'vsphere-ova': '.ova',
     wsl: '.tar.gz',
+    ami: '',
+    'rhel-edge-commit': '',
+    'rhel-edge-installer': '',
+    vhd: '',
   };
 
-  if (status === undefined) {
+  if (isError) {
     return <></>;
-  } else if (!isExpired) {
-    return (
-      <Button
-        component="a"
-        target="_blank"
-        variant="link"
-        isInline
-        href={status.image_status.upload_status?.options.url}
-      >
-        Download ({fileExtensions[compose.request.image_requests[0].image_type]}
-        )
-      </Button>
-    );
+  } else if (isFetching) {
+    return <Skeleton />;
+  } else if (isSuccess) {
+    const status = data.image_status.status;
+    const options = data.image_status.upload_status?.options;
+
+    if (options === undefined || !isAwss3UploadStatus(options)) {
+      throw TypeError(
+        `Error: options must be of type Awss3UploadStatus, not ${typeof options}.`
+      );
+    }
+
+    if (status === 'success' && !isExpired) {
+      return (
+        <Button
+          component="a"
+          target="_blank"
+          variant="link"
+          isInline
+          href={options.url}
+        >
+          Download (
+          {fileExtensions[compose.request.image_requests[0].image_type]})
+        </Button>
+      );
+    } else if (status === 'success' && isExpired) {
+      return (
+        <Button
+          component="a"
+          target="_blank"
+          variant="link"
+          onClick={() => navigate(resolveRelPath(`imagewizard/${compose.id}`))}
+          isInline
+        >
+          Recreate image
+        </Button>
+      );
+    } else {
+      return (
+        <Button isDisabled variant="link" isInline>
+          Download (
+          {fileExtensions[compose.request.image_requests[0].image_type]})
+        </Button>
+      );
+    }
   } else {
-    return (
-      <Button
-        component="a"
-        target="_blank"
-        variant="link"
-        onClick={() => navigate(resolveRelPath(`imagewizard/${compose.id}`))}
-        isInline
-      >
-        Recreate image
-      </Button>
-    );
+    return <></>;
   }
 };

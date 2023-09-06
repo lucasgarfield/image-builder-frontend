@@ -1,5 +1,9 @@
 import React from 'react';
 
+import { Skeleton } from '@patternfly/react-core';
+
+import { ReducedClonesByRegion } from './ClonesTable';
+
 import { ImageTypes } from '../../store/imageBuilderApi';
 import { ComposesResponseItem } from '../../store/imageBuilderApi';
 
@@ -29,10 +33,14 @@ export const Target = ({ compose }: TargetPropTypes) => {
 };
 
 type AwsTargetPropTypes = {
-  numCloneRows: number;
+  clones: ReducedClonesByRegion | undefined;
 };
 
-export const AwsTarget = ({ numCloneRows }: AwsTargetPropTypes) => {
+export const AwsTarget = ({ clones }: AwsTargetPropTypes) => {
+  if (clones === undefined) {
+    return <Skeleton />;
+  }
+  const numCloneRows = Object.entries(clones).length;
   const text = `Amazon Web Services (${numCloneRows + 1})`;
   return <>{text}</>;
 };

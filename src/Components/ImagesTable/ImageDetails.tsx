@@ -10,6 +10,7 @@ import {
   Spinner,
   Popover,
   Alert,
+  Skeleton,
 } from '@patternfly/react-core';
 import { ExternalLinkAltIcon } from '@patternfly/react-icons';
 
@@ -21,6 +22,10 @@ import {
   useGetComposeStatusQuery,
 } from '../../store/imageBuilderApi';
 import { useGetSourceListQuery } from '../../store/provisioningApi';
+import {
+  isGcpUploadRequestOptions,
+  isGcpUploadStatus,
+} from '../../store/types';
 
 const SourceNotFoundPopover = () => {
   return (
@@ -264,13 +269,31 @@ type GcpDetailsPropTypes = {
 };
 
 export const GcpDetails = ({ compose }: GcpDetailsPropTypes) => {
-  const { data } = useGetComposeStatusQuery({ composeId: compose.id });
+  const { data } = useGetComposeStatusQuery({
+    composeId: compose.id,
+  });
 
-  const sharedWith =
-    compose.request.image_requests[0].upload_request.options
-      .share_with_accounts;
-  const status = data?.image_status.status;
-  const projectId = data?.image_status.upload_status?.options.project_id;
+  const options = compose.request.image_requests[0].upload_request.options;
+
+  if (!isGcpUploadRequestOptions(options)) {
+    throw TypeError(
+      `Error: options must be of type GcpUploadRequestOptions, not ${typeof options}.`
+    );
+  }
+
+  const uploadStatus = data.image_status.upload_status?.options;
+
+  // TODO think on this, when/why would it be undefined? crash (throw error?) or
+  // fail gracefully?
+  if (uploadStatus === undefined) {
+    return <></>;
+  }
+
+  if (!isGcpUploadStatus(uploadStatus)) {
+    throw TypeError(
+      `Error: uploadStatus must be of type GcpUploadStatus, not ${typeof uploadStatus}.`
+    );
+  }
 
   return (
     <>
@@ -289,17 +312,19 @@ export const GcpDetails = ({ compose }: GcpDetailsPropTypes) => {
             </ClipboardCopy>
           </DescriptionListDescription>
         </DescriptionListGroup>
-        {status === 'success' && (
+        {data.image_status.status === 'success' && (
           <DescriptionListGroup>
             <DescriptionListTerm>Project ID</DescriptionListTerm>
-            <DescriptionListDescription>{projectId}</DescriptionListDescription>
+            <DescriptionListDescription>
+              {uploadStatus.project_id}
+            </DescriptionListDescription>
           </DescriptionListGroup>
         )}
-        {sharedWith && (
+        {options.share_with_accounts && (
           <DescriptionListGroup>
             <DescriptionListTerm>Shared with</DescriptionListTerm>
             <DescriptionListDescription>
-              {parseGcpSharedWith(sharedWith)}
+              {parseGcpSharedWith(options.share_with_accounts)}
             </DescriptionListDescription>
           </DescriptionListGroup>
         )}
@@ -312,15 +337,15 @@ export const GcpDetails = ({ compose }: GcpDetailsPropTypes) => {
         <DescriptionListGroup>
           <DescriptionListTerm>Image name</DescriptionListTerm>
           <DescriptionListDescription>
-            {status === 'success' ? (
+            {data.image_status.status === 'success' ? (
               <ClipboardCopy
                 hoverTip="Copy"
                 clickTip="Copied"
                 variant="inline-compact"
               >
-                {compose.request.image_name}
+                {uploadStatus.image_name}
               </ClipboardCopy>
-            ) : status === 'failure' ? (
+            ) : data.image_status.status === 'failure' ? (
               <p></p>
             ) : (
               <Spinner isSVG size="md" />
