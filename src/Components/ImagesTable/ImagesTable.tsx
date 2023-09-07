@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 import {
   Button,
@@ -28,7 +28,6 @@ import {
   Thead,
   Tr,
 } from '@patternfly/react-table';
-import { skipToken } from '@reduxjs/toolkit/dist/query';
 import { Link, NavigateFunction, useNavigate } from 'react-router-dom';
 
 import './ImagesTable.scss';
@@ -40,11 +39,10 @@ import {
 } from './ImageDetails';
 import { AwsS3Instance, CloudInstance } from './Instance';
 import Release from './Release';
-import { AwsS3Status, AwsStatus, CloudStatus } from './Status';
+import { AwsS3Status, CloudStatus } from './Status';
 import { AwsTarget, Target } from './Target';
 
 import { AWS_S3_EXPIRATION_TIME_IN_HOURS } from '../../constants';
-import { useGetCloneStatusesQuery } from '../../store/hooks';
 import {
   ComposesResponseItem,
   ComposeStatus,
@@ -52,7 +50,6 @@ import {
   useGetComposesQuery,
   useGetComposeStatusQuery,
 } from '../../store/imageBuilderApi';
-import { ClonesByRegion, ReducedClonesByRegion } from '../../store/types';
 import { resolveRelPath } from '../../Utilities/path';
 import {
   hoursToExpiration,
@@ -65,7 +62,7 @@ const ImagesTable = () => {
 
   const { data, isSuccess } = useGetComposesQuery({
     limit: perPage,
-    offset: page,
+    offset: perPage * (page - 1),
   });
 
   const onSetPage: OnSetPage = (_, page) => setPage(page);
@@ -233,7 +230,7 @@ type ImagesTableRowPropTypes = {
 const ImagesTableRow = ({ compose, rowIndex }: ImagesTableRowPropTypes) => {
   const [pollingInterval, setPollingInterval] = useState(8000);
 
-  const { data: composeStatus, isLoading } = useGetComposeStatusQuery(
+  const { data: composeStatus, isSuccess } = useGetComposeStatusQuery(
     {
       composeId: compose.id,
     },
@@ -251,35 +248,63 @@ const ImagesTableRow = ({ compose, rowIndex }: ImagesTableRowPropTypes) => {
     }
   }, [setPollingInterval, composeStatus]);
 
-  if (isLoading) {
-    return <LoadingRow compose={compose} rowIndex={rowIndex} />;
-  }
-
   const type = compose.request.image_requests[0].upload_request.type;
 
-  switch (type) {
-    // case 'aws':
-    //   return <AwsRow compose={compose} rowIndex={rowIndex} />;
-    case 'gcp':
-      return <GcpRow compose={compose} rowIndex={rowIndex} />;
-    case 'azure':
-      return <AzureRow compose={compose} rowIndex={rowIndex} />;
-    // case 'aws.s3':
-    //   return <AwsS3Row compose={compose} rowIndex={rowIndex} />;
-    default:
-      return <LoadingRow compose={compose} rowIndex={rowIndex} />;
+  if (isSuccess) {
+    switch (type) {
+      case 'aws':
+        return (
+          <AwsRow
+            compose={compose}
+            composeStatus={composeStatus}
+            rowIndex={rowIndex}
+          />
+        );
+      case 'gcp':
+        return (
+          <GcpRow
+            compose={compose}
+            composeStatus={composeStatus}
+            rowIndex={rowIndex}
+          />
+        );
+      case 'azure':
+        return (
+          <AzureRow
+            compose={compose}
+            composeStatus={composeStatus}
+            rowIndex={rowIndex}
+          />
+        );
+      case 'aws.s3':
+        return (
+          <AwsS3Row
+            compose={compose}
+            composeStatus={composeStatus}
+            rowIndex={rowIndex}
+          />
+        );
+    }
+  } else {
+    return <LoadingRow compose={compose} rowIndex={rowIndex} />;
   }
 };
 
 type GcpRowPropTypes = {
   compose: ComposesResponseItem;
+  composeStatus: ComposeStatus;
   rowIndex: number;
 };
 
-const GcpRow = ({ compose, rowIndex }: GcpRowPropTypes) => {
-  const details = <GcpDetails compose={compose} />;
-  const instance = <CloudInstance compose={compose} />;
-  const status = <CloudStatus compose={compose} />;
+const GcpRow = ({ compose, composeStatus, rowIndex }: GcpRowPropTypes) => {
+  const details = (
+    <GcpDetails compose={compose} composeStatus={composeStatus} />
+  );
+  const instance = (
+    <CloudInstance compose={compose} composeStatus={composeStatus} />
+  );
+  const status = <CloudStatus composeStatus={composeStatus} />;
+
   return (
     <Row
       compose={compose}
@@ -293,13 +318,18 @@ const GcpRow = ({ compose, rowIndex }: GcpRowPropTypes) => {
 
 type AzureRowPropTypes = {
   compose: ComposesResponseItem;
+  composeStatus: ComposeStatus;
   rowIndex: number;
 };
 
-const AzureRow = ({ compose, rowIndex }: AzureRowPropTypes) => {
-  const details = <AzureDetails compose={compose} />;
-  const instance = <CloudInstance compose={compose} />;
-  const status = <CloudStatus compose={compose} />;
+const AzureRow = ({ compose, composeStatus, rowIndex }: AzureRowPropTypes) => {
+  const details = (
+    <AzureDetails compose={compose} composeStatus={composeStatus} />
+  );
+  const instance = (
+    <CloudInstance compose={compose} composeStatus={composeStatus} />
+  );
+  const status = <CloudStatus composeStatus={composeStatus} />;
 
   return (
     <Row
@@ -314,18 +344,25 @@ const AzureRow = ({ compose, rowIndex }: AzureRowPropTypes) => {
 
 type AwsS3RowPropTypes = {
   compose: ComposesResponseItem;
+  composeStatus: ComposeStatus;
   rowIndex: number;
 };
 
-const AwsS3Row = ({ compose, rowIndex }: AwsS3RowPropTypes) => {
+const AwsS3Row = ({ compose, composeStatus, rowIndex }: AwsS3RowPropTypes) => {
   const expirationTime = hoursToExpiration(compose.created_at);
   const isExpired = expirationTime >= AWS_S3_EXPIRATION_TIME_IN_HOURS;
 
   const details = <AwsS3Details compose={compose} />;
-  const instance = <AwsS3Instance compose={compose} isExpired={isExpired} />;
+  const instance = (
+    <AwsS3Instance
+      compose={compose}
+      composeStatus={composeStatus}
+      isExpired={isExpired}
+    />
+  );
   const status = (
     <AwsS3Status
-      compose={compose}
+      composeStatus={composeStatus}
       isExpired={isExpired}
       hoursToExpiration={expirationTime}
     />
@@ -344,86 +381,30 @@ const AwsS3Row = ({ compose, rowIndex }: AwsS3RowPropTypes) => {
 
 type AwsRowPropTypes = {
   compose: ComposesResponseItem;
+  composeStatus: ComposeStatus;
   rowIndex: number;
 };
 
-const AwsRow = ({ compose, rowIndex }: AwsRowPropTypes) => {
-  const { data: composeStatus } = useGetComposeStatusQuery({
+const AwsRow = ({ compose, composeStatus, rowIndex }: AwsRowPropTypes) => {
+  const navigate = useNavigate();
+
+  const { data, isSuccess } = useGetComposeClonesQuery({
     composeId: compose.id,
   });
 
-  const navigate = useNavigate();
+  if (!isSuccess) {
+    return <LoadingRow compose={compose} rowIndex={rowIndex} />;
+  }
 
-  const { data: clones, isSuccess: isSuccessClones } = useGetComposeClonesQuery(
-    {
-      composeId: compose.id,
-    }
+  const target = <AwsTarget clones={data.data} />;
+
+  const status = <CloudStatus composeStatus={composeStatus} />;
+
+  const instance = (
+    <CloudInstance compose={compose} composeStatus={composeStatus} />
   );
 
-  const statuses = useGetCloneStatusesQuery(
-    isSuccessClones ? clones.data : [skipToken]
-  );
-
-  const isSuccessStatuses = !statuses.find(
-    (status) => status.isSuccess === false
-  );
-
-  const reducedClonesByRegion = useMemo(() => {
-    // Merge clones and their statuses
-    const clonesByRegion: ClonesByRegion = {};
-
-    clones.data.forEach((clone, i) => {
-      const region = clone.request.region;
-      if (clonesByRegion[region]) {
-        clonesByRegion[region].push({ clone: clone, status: statuses[i].data });
-      } else {
-        clonesByRegion[region] = [{ clone: clone, status: statuses[i].data }];
-      }
-    });
-
-    const reducingPriority = {
-      success: 4,
-      pending: 3,
-      running: 2,
-      failure: 1,
-    };
-
-    const reducedClonesByRegion: ReducedClonesByRegion = {};
-
-    for (const [region, clones] of Object.entries(clonesByRegion)) {
-      reducedClonesByRegion[region] = clones.reduce((current, accumulator) => {
-        const currentStatus = current.status?.status;
-        const currentPriority = currentStatus
-          ? reducingPriority[currentStatus]
-          : 0;
-        const accumulatorStatus = accumulator.status?.status;
-        const accumulatorPriority = accumulatorStatus
-          ? reducingPriority[accumulatorStatus]
-          : 0;
-
-        if (currentPriority > accumulatorPriority) {
-          return current;
-        } else {
-          return accumulator;
-        }
-      }, clones[0]);
-    }
-
-    return reducedClonesByRegion;
-  }, [clones, statuses]);
-
-  const target = <AwsTarget clones={reducedClonesByRegion} />;
-
-  const status = <AwsStatus compose={compose} clones={reducedClonesByRegion} />;
-
-  const instance = <CloudInstance compose={compose} />;
-
-  const details = (
-    <AwsDetails
-      compose={compose}
-      reducedClonesByRegion={reducedClonesByRegion}
-    />
-  );
+  const details = <AwsDetails compose={compose} clones={data.data} />;
 
   const actions = (
     <ActionsColumn items={awsActions(compose, composeStatus, navigate)} />
@@ -542,11 +523,6 @@ const LoadingRow = ({ compose, rowIndex }: LoadingRowPropTypes) => {
         </Td>
         <Td>
           <ActionsColumn isDisabled />
-        </Td>
-      </Tr>
-      <Tr>
-        <Td colSpan={8}>
-          <ExpandableRowContent />
         </Td>
       </Tr>
     </Tbody>

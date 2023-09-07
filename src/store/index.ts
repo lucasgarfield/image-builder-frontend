@@ -1,10 +1,5 @@
 import { notificationsReducer } from '@redhat-cloud-services/frontend-components-notifications/redux';
-import {
-  AnyAction,
-  MiddlewareArray,
-  ThunkDispatch,
-  configureStore,
-} from '@reduxjs/toolkit';
+import { configureStore } from '@reduxjs/toolkit';
 import promiseMiddleware from 'redux-promise-middleware';
 
 import clonesSlice from './clonesSlice';
@@ -36,9 +31,3 @@ export const middleware = (getDefaultMiddleware: Function) =>
   );
 
 export const store = configureStore({ reducer, middleware });
-
-export type RootState = ReturnType<typeof store.getState>;
-
-// TODO explain that this isn't working so we have the workaround
-//export type AppDispatch = typeof store.dispatch;
-export type AppDispatch = ThunkDispatch<RootState, null, AnyAction>;

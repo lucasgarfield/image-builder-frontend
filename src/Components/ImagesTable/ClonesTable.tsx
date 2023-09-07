@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 
-import { ClipboardCopy } from '@patternfly/react-core';
+import { ClipboardCopy, Skeleton } from '@patternfly/react-core';
 import {
   TableComposable,
   Tbody,
@@ -16,6 +16,7 @@ import {
   ClonesResponseItem,
   ComposesResponseItem,
   UploadStatus,
+  useGetCloneStatusQuery,
   useGetComposeStatusQuery,
 } from '../../store/imageBuilderApi';
 
@@ -35,7 +36,7 @@ const Ami = ({ status }: AmiPropTypes) => {
       {'ami' in status.options ? status.options.ami : null}
     </ClipboardCopy>
   ) : (
-    <></>
+    <Skeleton width="12rem" />
   );
 };
 
@@ -65,15 +66,50 @@ const Row = ({ ami, region, status }: RowPropTypes) => {
 
 type CloneRowPropTypes = {
   clone: ClonesResponseItem;
-  status: UploadStatus;
 };
 
-const CloneRow = ({ clone, status }: CloneRowPropTypes) => {
+const CloneRow = ({ clone }: CloneRowPropTypes) => {
+  const [pollingInterval, setPollingInterval] = useState(8000);
+
+  const { data: status, isSuccess } = useGetCloneStatusQuery(
+    {
+      id: clone.id,
+    },
+    { pollingInterval: pollingInterval }
+  );
+
+  useEffect(() => {
+    if (status?.status === 'success' || status?.status === 'failure') {
+      setPollingInterval(0);
+    } else {
+      setPollingInterval(8000);
+    }
+  }, [setPollingInterval, status]);
+
+  switch (true) {
+    case isSuccess:
+      return (
+        <Row
+          ami={<Ami status={status} />}
+          region={<CloneRegion region={clone.request.region} />}
+          status={<StatusClone clone={clone} status={status} />}
+        />
+      );
+    default:
+      return <LoadingRow clone={clone} />;
+  }
+};
+
+type LoadingRowPropTypes = {
+  clone: ClonesResponseItem;
+};
+
+const LoadingRow = ({ clone }: LoadingRowPropTypes) => {
   return (
     <Row
-      ami={<Ami status={status} />}
+      ami={<Skeleton />}
       region={<CloneRegion region={clone.request.region} />}
-      status={<StatusClone clone={clone} status={status} />}
+      status={<Skeleton />}
     />
   );
 };
@@ -104,24 +140,10 @@ export type ReducedClonesByRegion = {
 
 type ClonesTablePropTypes = {
   compose: ComposesResponseItem;
-  reducedClonesByRegion: ReducedClonesByRegion;
+  clones: ClonesResponseItem[];
 };
 
-const ClonesTable = ({
-  compose,
-  reducedClonesByRegion,
-}: ClonesTablePropTypes) => {
-  const cloneRows = [];
-  for (const reducedClone of Object.values(reducedClonesByRegion)) {
-    cloneRows.push(
-      <CloneRow
-        clone={reducedClone.clone}
-        status={reducedClone.status}
-        key={reducedClone.clone.id}
-      />
-    );
-  }
-
+const ClonesTable = ({ compose, clones }: ClonesTablePropTypes) => {
   return (
     <TableComposable variant="compact" data-testid="clones-table">
       <Thead>
@@ -132,7 +154,9 @@ const ClonesTable = ({
         </Tr>
       </Thead>
       <ComposeRow compose={compose} />
-      {cloneRows}
+      {clones.map((clone) => (
+        <CloneRow clone={clone} key={clone.id} />
+      ))}
     </TableComposable>
   );
 };

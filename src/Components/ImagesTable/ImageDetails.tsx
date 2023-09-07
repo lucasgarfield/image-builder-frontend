@@ -14,18 +14,22 @@ import {
 } from '@patternfly/react-core';
 import { ExternalLinkAltIcon } from '@patternfly/react-icons';
 
-import ClonesTable, { ReducedClonesByRegion } from './ClonesTable';
+import ClonesTable from './ClonesTable';
 
 import { extractProvisioningList } from '../../store/helpers';
 import {
+  ClonesResponseItem,
+  ComposeStatus,
   ComposesResponseItem,
-  useGetComposeStatusQuery,
 } from '../../store/imageBuilderApi';
 import { useGetSourceListQuery } from '../../store/provisioningApi';
 import {
+  isAwsUploadRequestOptions,
+  isAzureUploadRequestOptions,
+  isAzureUploadStatus,
   isGcpUploadRequestOptions,
   isGcpUploadStatus,
-} from '../../store/types';
+} from '../../store/typeGuards';
 
 const SourceNotFoundPopover = () => {
   return (
@@ -66,10 +70,15 @@ const SourceNotFoundPopover = () => {
   );
 };
 
-const AzureSourceName = ({ id }) => {
+type AzureSourceNamePropTypes = {
+  id: string;
+};
+
+const AzureSourceName = ({ id }: AzureSourceNamePropTypes) => {
   const { data: rawSources, isSuccess } = useGetSourceListQuery({
     provider: 'azure',
   });
+
   const sources = extractProvisioningList(rawSources);
 
   if (isSuccess) {
@@ -80,7 +89,7 @@ const AzureSourceName = ({ id }) => {
       return <SourceNotFoundPopover />;
     }
   } else {
-    return <Spinner isSVG size="md" />;
+    return <Skeleton />;
   }
 };
 
@@ -113,13 +122,18 @@ const parseGcpSharedWith = (sharedWith) => {
 
 type AwsDetailsPropTypes = {
   compose: ComposesResponseItem;
-  reducedClonesByRegion: ReducedClonesByRegion;
+  clones: ClonesResponseItem[];
 };
 
-export const AwsDetails = ({
-  compose,
-  reducedClonesByRegion,
-}: AwsDetailsPropTypes) => {
+export const AwsDetails = ({ compose, clones }: AwsDetailsPropTypes) => {
+  const options = compose.request.image_requests[0].upload_request.options;
+
+  if (!isAwsUploadRequestOptions(options)) {
+    throw TypeError(
+      `Error: options must be of type AwsUploadRequestOptions, not ${typeof options}.`
+    );
+  }
+
   return (
     <>
       <div className="pf-u-font-weight-bold pf-u-pb-md">Build Information</div>
@@ -137,22 +151,15 @@ export const AwsDetails = ({
             </ClipboardCopy>
           </DescriptionListDescription>
         </DescriptionListGroup>
-        {compose.request.image_requests[0].upload_request.options
-          .share_with_sources && (
+        {options.share_with_sources?.[0] && (
           <DescriptionListGroup>
             <DescriptionListTerm>Source</DescriptionListTerm>
             <DescriptionListDescription>
-              <AwsSourceName
-                id={
-                  compose.request.image_requests[0].upload_request.options
-                    .share_with_sources?.[0]
-                }
-              />
+              <AwsSourceName id={options.share_with_sources[0]} />
             </DescriptionListDescription>
           </DescriptionListGroup>
         )}
-        {compose.request.image_requests[0].upload_request.options
-          .share_with_accounts?.[0] && (
+        {options.share_with_accounts?.[0] && (
           <DescriptionListGroup>
             <DescriptionListTerm>Shared with</DescriptionListTerm>
             <DescriptionListDescription>
@@ -165,12 +172,9 @@ export const AwsDetails = ({
                 isInline
                 // the format of an account link is taken from
                 // https://docs.aws.amazon.com/signin/latest/userguide/sign-in-urls-defined.html
-                href={`https://${compose.request.image_requests[0].upload_request.options.share_with_accounts[0]}.signin.aws.amazon.com/console/`}
+                href={`https://${options.share_with_accounts[0]}.signin.aws.amazon.com/console/`}
               >
-                {
-                  compose.request.image_requests[0].upload_request.options
-                    .share_with_accounts[0]
-                }
+                {options.share_with_accounts[0]}
               </Button>
             </DescriptionListDescription>
           </DescriptionListGroup>
@@ -182,27 +186,38 @@ export const AwsDetails = ({
           Cloud Provider Identifiers
         </div>
       </>
-      <ClonesTable
-        compose={compose}
-        reducedClonesByRegion={reducedClonesByRegion}
-      />
+      <ClonesTable compose={compose} clones={clones} />
     </>
   );
 };
 
 type AzureDetailsPropTypes = {
   compose: ComposesResponseItem;
+  composeStatus: ComposeStatus;
 };
 
-export const AzureDetails = ({ compose }: AzureDetailsPropTypes) => {
-  const { data } = useGetComposeStatusQuery({ composeId: compose.id });
+export const AzureDetails = ({
+  compose,
+  composeStatus,
+}: AzureDetailsPropTypes) => {
+  const options = compose.request.image_requests[0].upload_request.options;
 
-  const status = data?.image_status.status;
-  const imageName = compose.request.image_name;
-  const sourceId =
-    compose.request.image_requests[0].upload_request.options.source_id;
-  const resourceGroup =
-    compose.request.image_requests[0].upload_request.options.resource_group;
+  if (!isAzureUploadRequestOptions(options)) {
+    throw TypeError(
+      `Error: options must be of type AzureUploadRequestOptions, not ${typeof options}.`
+    );
+  }
+
+  const sourceId = options.source_id;
+  const resourceGroup = options.resource_group;
+
+  const uploadStatus = composeStatus.image_status.upload_status?.options;
+
+  if (uploadStatus && !isAzureUploadStatus(uploadStatus)) {
+    throw TypeError(
+      `Error: uploadStatus must be of type AzureUploadStatus, not ${typeof uploadStatus}.`
+    );
+  }
 
   return (
     <>
@@ -244,18 +259,14 @@ export const AzureDetails = ({ compose }: AzureDetailsPropTypes) => {
         <DescriptionListGroup>
           <DescriptionListTerm>Image name</DescriptionListTerm>
           <DescriptionListDescription>
-            {status === 'success' ? (
+            {composeStatus.image_status.status === 'success' && (
               <ClipboardCopy
                 hoverTip="Copy"
                 clickTip="Copied"
                 variant="inline-compact"
               >
-                {imageName}
+                {uploadStatus?.image_name}
               </ClipboardCopy>
-            ) : status === 'failure' ? (
-              <p></p>
-            ) : (
-              <Spinner isSVG size="md" />
             )}
           </DescriptionListDescription>
         </DescriptionListGroup>
@@ -266,13 +277,10 @@ export const AzureDetails = ({ compose }: AzureDetailsPropTypes) => {
 
 type GcpDetailsPropTypes = {
   compose: ComposesResponseItem;
+  composeStatus: ComposeStatus;
 };
 
-export const GcpDetails = ({ compose }: GcpDetailsPropTypes) => {
-  const { data } = useGetComposeStatusQuery({
-    composeId: compose.id,
-  });
-
+export const GcpDetails = ({ compose, composeStatus }: GcpDetailsPropTypes) => {
   const options = compose.request.image_requests[0].upload_request.options;
 
   if (!isGcpUploadRequestOptions(options)) {
@@ -281,15 +289,9 @@ export const GcpDetails = ({ compose }: GcpDetailsPropTypes) => {
     );
   }
 
-  const uploadStatus = data.image_status.upload_status?.options;
+  const uploadStatus = composeStatus.image_status.upload_status?.options;
 
-  // TODO think on this, when/why would it be undefined? crash (throw error?) or
-  // fail gracefully?
-  if (uploadStatus === undefined) {
-    return <></>;
-  }
-
-  if (!isGcpUploadStatus(uploadStatus)) {
+  if (uploadStatus && !isGcpUploadStatus(uploadStatus)) {
     throw TypeError(
       `Error: uploadStatus must be of type GcpUploadStatus, not ${typeof uploadStatus}.`
     );
@@ -312,11 +314,11 @@ export const GcpDetails = ({ compose }: GcpDetailsPropTypes) => {
             </ClipboardCopy>
           </DescriptionListDescription>
         </DescriptionListGroup>
-        {data.image_status.status === 'success' && (
+        {composeStatus.image_status.status === 'success' && (
           <DescriptionListGroup>
             <DescriptionListTerm>Project ID</DescriptionListTerm>
             <DescriptionListDescription>
-              {uploadStatus.project_id}
+              {uploadStatus?.project_id}
             </DescriptionListDescription>
           </DescriptionListGroup>
         )}
@@ -337,18 +339,14 @@ export const GcpDetails = ({ compose }: GcpDetailsPropTypes) => {
         <DescriptionListGroup>
           <DescriptionListTerm>Image name</DescriptionListTerm>
           <DescriptionListDescription>
-            {data.image_status.status === 'success' ? (
+            {composeStatus.image_status.status === 'success' && (
               <ClipboardCopy
                 hoverTip="Copy"
                 clickTip="Copied"
                 variant="inline-compact"
               >
-                {uploadStatus.image_name}
+                {uploadStatus?.image_name}
               </ClipboardCopy>
-            ) : data.image_status.status === 'failure' ? (
-              <p></p>
-            ) : (
-              <Spinner isSVG size="md" />
             )}
           </DescriptionListDescription>
         </DescriptionListGroup>

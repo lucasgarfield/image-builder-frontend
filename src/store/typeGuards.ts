@@ -2,7 +2,7 @@ import {
   AwsUploadRequestOptions,
   Awss3UploadStatus,
   AzureUploadRequestOptions,
-  ClonesResponseItem,
+  AzureUploadStatus,
   GcpUploadRequestOptions,
   GcpUploadStatus,
   UploadRequest,
@@ -39,16 +39,8 @@ export const isAwss3UploadStatus = (
   return (status as Awss3UploadStatus).url !== undefined;
 };
 
-export type ClonesByRegion = {
-  [region: string]: Array<{
-    clone: ClonesResponseItem;
-    status: UploadStatus | undefined;
-  }>;
-};
-
-export type ReducedClonesByRegion = {
-  [region: string]: {
-    clone: ClonesResponseItem;
-    status: UploadStatus | undefined;
-  };
+export const isAzureUploadStatus = (
+  status: UploadStatus['options']
+): status is AzureUploadStatus => {
+  return (status as AzureUploadStatus).image_name !== undefined;
 };

@@ -1,26 +1,22 @@
 import React from 'react';
 
-import { Skeleton } from '@patternfly/react-core';
-
-import { ReducedClonesByRegion } from './ClonesTable';
-
-import { ImageTypes } from '../../store/imageBuilderApi';
+import { ClonesResponseItem, ImageTypes } from '../../store/imageBuilderApi';
 import { ComposesResponseItem } from '../../store/imageBuilderApi';
 
 const targetOptions: { [key in ImageTypes]: string } = {
   aws: 'Amazon Web Services',
   azure: 'Microsoft Azure',
-  'edge-commit': '',
-  'edge-installer': '',
+  'edge-commit': 'Edge Commit',
+  'edge-installer': 'Edge Installer',
   gcp: 'Google Cloud Platform',
   'guest-image': 'Virtualization - Guest image',
   'image-installer': 'Bare metal - Installer',
   vsphere: 'VMWare vSphere',
   'vsphere-ova': 'VMWare vSphere',
   wsl: 'Windows Subsystem for Linux',
-  ami: '',
-  'rhel-edge-commit': '',
-  'rhel-edge-installer': '',
+  ami: 'Amazon Web Services',
+  'rhel-edge-commit': 'RHEL Edge Commit',
+  'rhel-edge-installer': 'RHEL Edge Installer',
   vhd: '',
 };
 
@@ -33,14 +29,10 @@ export const Target = ({ compose }: TargetPropTypes) => {
 };
 
 type AwsTargetPropTypes = {
-  clones: ReducedClonesByRegion | undefined;
+  clones: ClonesResponseItem[];
 };
 
 export const AwsTarget = ({ clones }: AwsTargetPropTypes) => {
-  if (clones === undefined) {
-    return <Skeleton />;
-  }
-  const numCloneRows = Object.entries(clones).length;
-  const text = `Amazon Web Services (${numCloneRows + 1})`;
+  const text = `Amazon Web Services (${clones.length + 1})`;
   return <>{text}</>;
 };

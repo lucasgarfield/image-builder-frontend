@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-import { Button, Modal, ModalVariant, Skeleton } from '@patternfly/react-core';
+import { Button, Modal, ModalVariant } from '@patternfly/react-core';
 import { useChrome } from '@redhat-cloud-services/frontend-components/useChrome';
 import { useLoadModule, useScalprum } from '@scalprum/react-core';
 import { useNavigate } from 'react-router-dom';
@@ -8,27 +8,31 @@ import { useNavigate } from 'react-router-dom';
 import { MODAL_ANCHOR } from '../../constants';
 import {
   ComposesResponseItem,
+  ComposeStatus,
   ImageTypes,
-  useGetComposeStatusQuery,
 } from '../../store/imageBuilderApi';
 import {
   isAwsUploadRequestOptions,
   isAwss3UploadStatus,
   isGcpUploadRequestOptions,
-} from '../../store/types';
+} from '../../store/typeGuards';
 import { resolveRelPath } from '../../Utilities/path';
 
 type CloudInstancePropTypes = {
   compose: ComposesResponseItem;
+  composeStatus: ComposeStatus;
 };
 
-export const CloudInstance = ({ compose }: CloudInstancePropTypes) => {
+export const CloudInstance = ({
+  compose,
+  composeStatus,
+}: CloudInstancePropTypes) => {
   const { initialized: chromeInitialized } = useChrome();
   const scalprum = useScalprum();
   const hasProvisioning = chromeInitialized && scalprum.config?.provisioning;
 
   if (hasProvisioning) {
-    return <ProvisioningLink compose={compose} />;
+    return <ProvisioningLink compose={compose} composeStatus={composeStatus} />;
   } else {
     return <></>;
   }
@@ -36,9 +40,13 @@ export const CloudInstance = ({ compose }: CloudInstancePropTypes) => {
 
 type ProvisioningLinkPropTypes = {
   compose: ComposesResponseItem;
+  composeStatus: ComposeStatus;
 };
 
-const ProvisioningLink = ({ compose }: ProvisioningLinkPropTypes) => {
+const ProvisioningLink = ({
+  compose,
+  composeStatus,
+}: ProvisioningLinkPropTypes) => {
   const [wizardOpen, openWizard] = useState(false);
   const [exposedScalprumModule, error] = useLoadModule(
     {
@@ -47,19 +55,14 @@ const ProvisioningLink = ({ compose }: ProvisioningLinkPropTypes) => {
     },
     {}
   );
-  const { data, isError, isFetching, isSuccess } = useGetComposeStatusQuery({
-    composeId: compose.id,
-  });
 
-  if (isError || error || !exposedScalprumModule) {
+  if (error || !exposedScalprumModule) {
     return (
       <Button variant="link" isInline isDisabled>
         Launch
       </Button>
     );
-  } else if (isFetching) {
-    return <Skeleton />;
-  } else if (isSuccess) {
+  } else {
     const appendTo = () => document.querySelector(MODAL_ANCHOR) as HTMLElement;
     const ProvisioningWizard = exposedScalprumModule.default;
     const provider = getImageProvider(compose);
@@ -104,15 +107,13 @@ const ProvisioningLink = ({ compose }: ProvisioningLinkPropTypes) => {
                 accountIDs: accountIds,
                 uploadOptions:
                   compose.request.image_requests[0].upload_request.options,
-                uploadStatus: data.image_status.upload_status,
+                uploadStatus: composeStatus.image_status.upload_status,
               }}
             />
           </Modal>
         )}
       </>
     );
-  } else {
-    return <></>;
   }
 };
 
@@ -135,17 +136,15 @@ const getImageProvider = (compose: ComposesResponseItem) => {
 
 type AwsS3InstancePropTypes = {
   compose: ComposesResponseItem;
+  composeStatus: ComposeStatus;
   isExpired: boolean;
 };
 
 export const AwsS3Instance = ({
   compose,
+  composeStatus,
   isExpired,
 }: AwsS3InstancePropTypes) => {
-  const { data, isError, isFetching, isSuccess } = useGetComposeStatusQuery({
-    composeId: compose.id,
-  });
-
   const navigate = useNavigate();
 
   const fileExtensions: { [key in ImageTypes]: string } = {
@@ -165,54 +164,46 @@ export const AwsS3Instance = ({
     vhd: '',
   };
 
-  if (isError) {
-    return <></>;
-  } else if (isFetching) {
-    return <Skeleton />;
-  } else if (isSuccess) {
-    const status = data.image_status.status;
-    const options = data.image_status.upload_status?.options;
+  const status = composeStatus.image_status.status;
+  const options = composeStatus.image_status.upload_status?.options;
 
-    if (options === undefined || !isAwss3UploadStatus(options)) {
-      throw TypeError(
-        `Error: options must be of type Awss3UploadStatus, not ${typeof options}.`
-      );
-    }
+  if (options && !isAwss3UploadStatus(options)) {
+    throw TypeError(
+      `Error: options must be of type Awss3UploadStatus, not ${typeof options}.`
+    );
+  }
 
-    if (status === 'success' && !isExpired) {
-      return (
-        <Button
-          component="a"
-          target="_blank"
-          variant="link"
-          isInline
-          href={options.url}
-        >
-          Download (
-          {fileExtensions[compose.request.image_requests[0].image_type]})
-        </Button>
-      );
-    } else if (status === 'success' && isExpired) {
-      return (
-        <Button
-          component="a"
-          target="_blank"
-          variant="link"
-          onClick={() => navigate(resolveRelPath(`imagewizard/${compose.id}`))}
-          isInline
-        >
-          Recreate image
-        </Button>
-      );
-    } else {
-      return (
-        <Button isDisabled variant="link" isInline>
-          Download (
-          {fileExtensions[compose.request.image_requests[0].image_type]})
-        </Button>
-      );
-    }
+  if (status === 'success' && !isExpired) {
+    return (
+      <Button
+        component="a"
+        target="_blank"
+        variant="link"
+        isInline
+        href={options?.url}
+      >
+        Download ({fileExtensions[compose.request.image_requests[0].image_type]}
+        )
+      </Button>
+    );
+  } else if (status === 'success' && isExpired) {
+    return (
+      <Button
+        component="a"
+        target="_blank"
+        variant="link"
+        onClick={() => navigate(resolveRelPath(`imagewizard/${compose.id}`))}
+        isInline
+      >
+        Recreate image
+      </Button>
+    );
   } else {
-    return <></>;
+    return (
+      <Button isDisabled variant="link" isInline>
+        Download ({fileExtensions[compose.request.image_requests[0].image_type]}
+        )
+      </Button>
+    );
   }
 };

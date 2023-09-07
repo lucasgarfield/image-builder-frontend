@@ -89,94 +89,47 @@ export const AwsDetailsStatus = ({ compose }: ComposeStatusPropTypes) => {
   }
 };
 
-type ReducedClonesByRegion = {
-  [region: string]: {
-    clone: ClonesResponseItem;
-    status: UploadStatus | undefined;
-  };
-};
-
 type AwsStatusPropTypes = {
-  compose: ComposesResponseItem;
-  clones: ReducedClonesByRegion | undefined;
+  clones: ClonesResponseItem[];
+  composeStatus: ComposeStatus;
+  cloneStatuses: UploadStatus[];
 };
 
-export const AwsStatus = ({ compose, clones }: AwsStatusPropTypes) => {
-  const { data, isSuccess } = useGetComposeStatusQuery({
-    composeId: compose.id,
-  });
-
-  if (!isSuccess) {
-    return <></>;
-  } else if (Object.values(clones).length === 0) {
-    return <CloudStatus compose={compose} />;
-  }
-
-  // TODO rename this
-  const statusesX = new Set();
-  statusesX.add(data.image_status.status);
-  Object.values(clones).forEach((clone) => {
-    statusesX.add(clone.status?.status);
-  });
-
-  if (statusesX.has('failure')) {
-    return (
-      <ErrorStatus
-        icon={statuses['failure'].icon}
-        text={'Sharing image failed'}
-        reason={'Failed to share image to one or more regions.'}
-      />
-    );
-  } else if (statusesX.has('pending')) {
-    return (
-      <Status icon={statuses['pending'].icon} text={statuses['pending'].text} />
-    );
-  } else if (statusesX.has('running')) {
-    return (
-      <Status icon={statuses['running'].icon} text={statuses['running'].text} />
-    );
-  } else if (statusesX.has('success')) {
-    return (
-      <Status icon={statuses['success'].icon} text={statuses['success'].text} />
-    );
+export const AwsStatus = ({
+  clones,
+  composeStatus,
+  cloneStatuses,
+}: AwsStatusPropTypes) => {
+  if (clones.length === 0) {
+    return <CloudStatus composeStatus={composeStatus} />;
+  } else if (clones.length === cloneStatuses.length) {
+    return <p>TODO</p>;
   } else {
-    return <></>;
+    return <Skeleton />;
   }
 };
 
 type CloudStatusPropTypes = {
-  compose: ComposesResponseItem;
+  composeStatus: ComposeStatus;
 };
 
-export const CloudStatus = ({ compose }: CloudStatusPropTypes) => {
-  const { data, isError, isFetching, isSuccess } = useGetComposeStatusQuery({
-    composeId: compose.id,
-  });
-
-  if (isError) {
-    return <></>;
-  } else if (isFetching) {
-    return <Skeleton width="50%" />;
-  } else if (isSuccess) {
-    switch (data.image_status.status) {
-      case 'failure':
-        return (
-          <ErrorStatus
-            icon={statuses['failure'].icon}
-            text={statuses['failure'].text}
-            reason={data.image_status.error?.reason || ''}
-          />
-        );
-      default:
-        return (
-          <Status
-            icon={statuses[data.image_status.status].icon}
-            text={statuses[data.image_status.status].text}
-          />
-        );
-    }
-  } else {
-    return <></>;
+export const CloudStatus = ({ composeStatus }: CloudStatusPropTypes) => {
+  switch (composeStatus.image_status.status) {
+    case 'failure':
+      return (
+        <ErrorStatus
+          icon={statuses['failure'].icon}
+          text={statuses['failure'].text}
+          reason={composeStatus.image_status.error?.reason || ''}
+        />
+      );
+    default:
+      return (
+        <Status
+          icon={statuses[composeStatus.image_status.status].icon}
+          text={statuses[composeStatus.image_status.status].text}
+        />
+      );
   }
 };
 
@@ -205,25 +158,17 @@ export const AzureStatus = ({ status }: AzureStatusPropTypes) => {
 };
 
 type AwsS3StatusPropTypes = {
-  compose: ComposesResponseItem;
+  composeStatus: ComposeStatus;
   isExpired: boolean;
   hoursToExpiration: number;
 };
 
 export const AwsS3Status = ({
-  compose,
+  composeStatus,
   isExpired,
   hoursToExpiration,
 }: AwsS3StatusPropTypes) => {
-  const { data, isSuccess } = useGetComposeStatusQuery({
-    composeId: compose.id,
-  });
-
-  if (!isSuccess) {
-    return <></>;
-  }
-
-  const status = data.image_status.status;
+  const status = composeStatus.image_status.status;
 
   if (isExpired) {
     return (
@@ -239,9 +184,6 @@ export const AwsS3Status = ({
   } else {
     return <Status icon={statuses[status].icon} text={statuses[status].text} />;
   }
-  // TODO what about failure state?
-  // maybe here we need to do an early if return for isExpired,
-  // then switch on success/pending/failure etc...?
 };
 
 const statuses = {
