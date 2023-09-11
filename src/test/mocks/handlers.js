@@ -12,6 +12,7 @@ import {
 } from '../fixtures/activationKeys';
 import { mockArchitecturesByDistro } from '../fixtures/architectures';
 import {
+  composesEndpoint,
   mockClones,
   mockCloneStatus,
   mockComposes,
@@ -70,7 +71,7 @@ export const handlers = [
     return res(ctx.status(200), ctx.json(mockRepositoryResults(args)));
   }),
   rest.get(`${IMAGE_BUILDER_API}/composes`, (req, res, ctx) => {
-    return res(ctx.status(200), ctx.json(mockComposes));
+    return res(ctx.status(200), ctx.json(composesEndpoint(req)));
   }),
   rest.get(`${IMAGE_BUILDER_API}/composes/:composeId`, (req, res, ctx) => {
     const { composeId } = req.params;

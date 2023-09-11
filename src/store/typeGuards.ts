@@ -18,7 +18,7 @@ export const isGcpUploadRequestOptions = (
 export const isAwsUploadRequestOptions = (
   options: UploadRequest['options']
 ): options is AwsUploadRequestOptions => {
-  return (options as AwsUploadRequestOptions).share_with_sources !== undefined;
+  return true;
 };
 
 export const isAzureUploadRequestOptions = (

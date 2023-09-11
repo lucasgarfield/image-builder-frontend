@@ -32,7 +32,10 @@ export const renderCustomRoutesWithReduxRouter = (
   return { router, store };
 };
 
-export const renderWithReduxRouter = (route = '/', preloadedState = {}) => {
+export const renderWithReduxRouter = async (
+  route = '/',
+  preloadedState = {}
+) => {
   const store = configureStore({ reducer, middleware, preloadedState });
 
   const routes = [
@@ -54,7 +57,7 @@ export const renderWithReduxRouter = (route = '/', preloadedState = {}) => {
     initialEntries: [resolveRelPath(route)],
   });
 
-  render(
+  await render(
     <Provider store={store}>
       <RouterProvider router={router} />
     </Provider>

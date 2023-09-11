@@ -1,8 +1,12 @@
 import { RHEL_8 } from '../../constants';
 import {
+  AwsUploadRequestOptions,
   ClonesResponse,
   ComposeStatus,
   ComposesResponse,
+  ComposesResponseItem,
+  GetComposesApiArg,
+  GetComposesApiResponse,
   UploadStatus,
 } from '../../store/imageBuilderApi';
 
@@ -22,246 +26,257 @@ export const mockComposesEmpty: ComposesResponse = {
 const currentDate = new Date();
 const currentDateInString = currentDate.toISOString();
 
-export const mockComposes: ComposesResponse = {
-  meta: {
-    count: 13,
-  },
-  links: {
-    first: '',
-    last: '',
-  },
-  data: [
-    {
-      id: '1579d95b-8f1d-4982-8c53-8c2afa4ab04c',
-      image_name: 'testImageName',
-      created_at: '2021-04-27T12:31:12Z',
-      request: {
-        distribution: RHEL_8,
-        image_requests: [
-          {
-            architecture: 'x86_64',
-            image_type: 'aws',
-            upload_request: {
-              type: 'aws',
-              options: {
-                share_with_accounts: ['123123123123'],
-              },
-            },
-          },
-        ],
-      },
+export const composesEndpoint: GetComposesApiResponse = (
+  req: GetComposesApiArg
+) => {
+  const params = req.url.searchParams;
+  const limit = params.get('limit') || 100;
+  const offset = params.get('offset') || 0;
+
+  return {
+    meta: {
+      count: mockComposes.length,
     },
-    // kept "running" for backward compatibility
-    {
-      id: 'c1cfa347-4c37-49b5-8e73-6aa1d1746cfa',
-      created_at: '2021-04-27T12:31:12Z',
-      request: {
-        distribution: RHEL_8,
-        image_requests: [
-          {
-            architecture: 'x86_64',
-            image_type: 'gcp',
-            upload_request: {
-              type: 'gcp',
-              options: {
-                share_with_accounts: ['serviceAccount:test@email.com'],
-              },
-            },
-          },
-        ],
-      },
+    links: {
+      first: '',
+      last: '',
     },
-    {
-      id: 'edbae1c2-62bc-42c1-ae0c-3110ab718f58',
-      created_at: '2021-04-27T12:31:12Z',
-      request: {
-        distribution: RHEL_8,
-        image_requests: [
-          {
-            architecture: 'x86_64',
-            image_type: 'aws',
-            upload_request: {
-              type: 'aws',
-              options: {},
-            },
-          },
-        ],
-      },
-    },
-    {
-      id: '42ad0826-30b5-4f64-a24e-957df26fd564',
-      created_at: '2021-04-27T12:31:12Z',
-      request: {
-        distribution: RHEL_8,
-        image_requests: [
-          {
-            architecture: 'x86_64',
-            image_type: 'aws',
-            upload_request: {
-              type: 'aws',
-              options: {},
-            },
-          },
-        ],
-      },
-    },
-    {
-      id: '955944a2-e149-4058-8ac1-35b514cb5a16',
-      created_at: '2021-04-27T12:31:12Z',
-      request: {
-        distribution: RHEL_8,
-        image_requests: [
-          {
-            architecture: 'x86_64',
-            image_type: 'aws',
-            upload_request: {
-              type: 'aws',
-              options: {},
-            },
-          },
-        ],
-      },
-    },
-    {
-      id: 'f7a60094-b376-4b58-a102-5c8c82dfd18b',
-      created_at: '2021-04-27T12:31:12Z',
-      request: {
-        distribution: RHEL_8,
-        image_requests: [
-          {
-            architecture: 'x86_64',
-            image_type: 'aws',
-            upload_request: {
-              type: 'aws',
-              options: {},
-            },
-          },
-        ],
-      },
-    },
-    {
-      id: '61b0effa-c901-4ee5-86b9-2010b47f1b22',
-      created_at: '2021-04-27T12:31:12Z',
-      request: {
-        distribution: RHEL_8,
-        image_requests: [
-          {
-            architecture: 'x86_64',
-            image_type: 'aws',
-            upload_request: {
-              type: 'aws',
-              options: {},
-            },
-          },
-        ],
-      },
-    },
-    {
-      id: 'ca03f120-9840-4959-871e-94a5cb49d1f2',
-      created_at: '2021-04-27T12:31:12Z',
-      request: {
-        distribution: RHEL_8,
-        image_requests: [
-          {
-            architecture: 'x86_64',
-            image_type: 'gcp',
-            upload_request: {
-              type: 'gcp',
-              options: {
-                share_with_accounts: ['serviceAccount:test@email.com'],
-              },
-            },
-          },
-        ],
-      },
-    },
-    {
-      id: '551de6f6-1533-4b46-a69f-7924051f9bc6',
-      created_at: '2021-04-27T12:31:12Z',
-      request: {
-        distribution: RHEL_8,
-        image_requests: [
-          {
-            architecture: 'x86_64',
-            image_type: 'azure',
-            upload_request: {
-              type: 'azure',
-              options: {},
-            },
-          },
-        ],
-      },
-    },
-    {
-      created_at: '2021-04-27T12:31:12Z',
-      id: 'b7193673-8dcc-4a5f-ac30-e9f4940d8346',
-      request: {
-        distribution: RHEL_8,
-        image_requests: [
-          {
-            architecture: 'x86_64',
-            image_type: 'vsphere',
-            upload_request: {
-              options: {},
-              type: 'aws.s3',
-            },
-          },
-        ],
-      },
-    },
-    {
-      created_at: '2021-04-27T12:31:12Z',
-      id: 'hyk93673-8dcc-4a61-ac30-e9f4940d8346',
-      request: {
-        distribution: RHEL_8,
-        image_requests: [
-          {
-            architecture: 'x86_64',
-            image_type: 'vsphere-ova',
-            upload_request: {
-              options: {},
-              type: 'aws.s3',
-            },
-          },
-        ],
-      },
-    },
-    {
-      created_at: '2021-04-27T12:31:12Z',
-      id: '4873fd0f-1851-4b9f-b4fe-4639fce90794',
-      request: {
-        distribution: RHEL_8,
-        image_requests: [
-          {
-            architecture: 'x86_64',
-            image_type: 'image-installer',
-            upload_request: {
-              options: {},
-              type: 'aws.s3',
-            },
-          },
-        ],
-      },
-    },
-    {
-      created_at: currentDateInString,
-      id: '7b7d0d51-7106-42ab-98f2-f89872a9d599',
-      request: {
-        distribution: RHEL_8,
-        image_requests: [
-          {
-            architecture: 'x86_64',
-            image_type: 'guest-image',
-            upload_request: {
-              options: {},
-              type: 'aws.s3',
-            },
-          },
-        ],
-      },
-    },
-  ],
+    data: mockComposes.slice(offset, offset + limit),
+  };
 };
+
+const mockComposes: ComposesResponseItem[] = [
+  {
+    id: '1579d95b-8f1d-4982-8c53-8c2afa4ab04c',
+    image_name: 'testImageName',
+    created_at: '2021-04-27T12:31:12Z',
+    request: {
+      distribution: RHEL_8,
+      image_requests: [
+        {
+          architecture: 'x86_64',
+          image_type: 'aws',
+          upload_request: {
+            type: 'aws',
+            options: {
+              share_with_accounts: ['123123123123'],
+            },
+          },
+        },
+      ],
+    },
+  },
+  {
+    id: 'c1cfa347-4c37-49b5-8e73-6aa1d1746cfa',
+    created_at: '2021-04-27T12:31:12Z',
+    request: {
+      distribution: RHEL_8,
+      image_requests: [
+        {
+          architecture: 'x86_64',
+          image_type: 'gcp',
+          upload_request: {
+            type: 'gcp',
+            options: {
+              share_with_accounts: ['serviceAccount:test@email.com'],
+            },
+          },
+        },
+      ],
+    },
+  },
+  {
+    id: 'edbae1c2-62bc-42c1-ae0c-3110ab718f58',
+    created_at: '2021-04-27T12:31:12Z',
+    request: {
+      distribution: RHEL_8,
+      image_requests: [
+        {
+          architecture: 'x86_64',
+          image_type: 'aws',
+          upload_request: {
+            type: 'aws',
+            options: {},
+          },
+        },
+      ],
+    },
+  },
+  {
+    id: '42ad0826-30b5-4f64-a24e-957df26fd564',
+    created_at: '2021-04-27T12:31:12Z',
+    request: {
+      distribution: RHEL_8,
+      image_requests: [
+        {
+          architecture: 'x86_64',
+          image_type: 'aws',
+          upload_request: {
+            type: 'aws',
+            options: {},
+          },
+        },
+      ],
+    },
+  },
+  {
+    id: '955944a2-e149-4058-8ac1-35b514cb5a16',
+    created_at: '2021-04-27T12:31:12Z',
+    request: {
+      distribution: RHEL_8,
+      image_requests: [
+        {
+          architecture: 'x86_64',
+          image_type: 'aws',
+          upload_request: {
+            type: 'aws',
+            options: {},
+          },
+        },
+      ],
+    },
+  },
+  {
+    id: 'f7a60094-b376-4b58-a102-5c8c82dfd18b',
+    created_at: '2021-04-27T12:31:12Z',
+    request: {
+      distribution: RHEL_8,
+      image_requests: [
+        {
+          architecture: 'x86_64',
+          image_type: 'aws',
+          upload_request: {
+            type: 'aws',
+            options: {},
+          },
+        },
+      ],
+    },
+  },
+  {
+    id: '61b0effa-c901-4ee5-86b9-2010b47f1b22',
+    created_at: '2021-04-27T12:31:12Z',
+    request: {
+      distribution: RHEL_8,
+      image_requests: [
+        {
+          architecture: 'x86_64',
+          image_type: 'aws',
+          upload_request: {
+            type: 'aws',
+            options: {},
+          },
+        },
+      ],
+    },
+  },
+  {
+    id: 'ca03f120-9840-4959-871e-94a5cb49d1f2',
+    created_at: '2021-04-27T12:31:12Z',
+    request: {
+      distribution: RHEL_8,
+      image_requests: [
+        {
+          architecture: 'x86_64',
+          image_type: 'gcp',
+          upload_request: {
+            type: 'gcp',
+            options: {
+              share_with_accounts: ['serviceAccount:test@email.com'],
+            },
+          },
+        },
+      ],
+    },
+  },
+  {
+    id: '551de6f6-1533-4b46-a69f-7924051f9bc6',
+    created_at: '2021-04-27T12:31:12Z',
+    request: {
+      distribution: RHEL_8,
+      image_requests: [
+        {
+          architecture: 'x86_64',
+          image_type: 'azure',
+          upload_request: {
+            type: 'azure',
+            options: {
+              resource_group: 'my_resource_group',
+            },
+          },
+        },
+      ],
+    },
+  },
+  {
+    created_at: '2021-04-27T12:31:12Z',
+    id: 'b7193673-8dcc-4a5f-ac30-e9f4940d8346',
+    request: {
+      distribution: RHEL_8,
+      image_requests: [
+        {
+          architecture: 'x86_64',
+          image_type: 'vsphere',
+          upload_request: {
+            options: {},
+            type: 'aws.s3',
+          },
+        },
+      ],
+    },
+  },
+  {
+    created_at: '2021-04-27T12:31:12Z',
+    id: 'hyk93673-8dcc-4a61-ac30-e9f4940d8346',
+    request: {
+      distribution: RHEL_8,
+      image_requests: [
+        {
+          architecture: 'x86_64',
+          image_type: 'vsphere-ova',
+          upload_request: {
+            options: {},
+            type: 'aws.s3',
+          },
+        },
+      ],
+    },
+  },
+  {
+    created_at: '2021-04-27T12:31:12Z',
+    id: '4873fd0f-1851-4b9f-b4fe-4639fce90794',
+    request: {
+      distribution: RHEL_8,
+      image_requests: [
+        {
+          architecture: 'x86_64',
+          image_type: 'image-installer',
+          upload_request: {
+            options: {},
+            type: 'aws.s3',
+          },
+        },
+      ],
+    },
+  },
+  {
+    created_at: currentDateInString,
+    id: '7b7d0d51-7106-42ab-98f2-f89872a9d599',
+    request: {
+      distribution: RHEL_8,
+      image_requests: [
+        {
+          architecture: 'x86_64',
+          image_type: 'guest-image',
+          upload_request: {
+            options: {},
+            type: 'aws.s3',
+          },
+        },
+      ],
+    },
+  },
+];
 
 export const mockStatus = (composeId: string): ComposeStatus => {
   const mockComposes: { [key: string]: ComposeStatus } = {
@@ -294,7 +309,6 @@ export const mockStatus = (composeId: string): ComposeStatus => {
       },
     },
     'c1cfa347-4c37-49b5-8e73-6aa1d1746cfa': {
-      // kept "running" for backward compatibility
       image_status: {
         status: 'failure',
         error: {
@@ -458,7 +472,9 @@ export const mockStatus = (composeId: string): ComposeStatus => {
             image_type: 'azure',
             upload_request: {
               type: 'azure',
-              options: {},
+              options: {
+                resource_group: 'my_resource_group',
+              },
             },
           },
         ],
