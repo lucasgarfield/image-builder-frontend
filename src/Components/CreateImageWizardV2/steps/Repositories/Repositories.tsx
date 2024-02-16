@@ -38,9 +38,13 @@ import {
   useListRepositoriesQuery,
 } from '../../../../store/contentSourcesApi';
 import { useAppDispatch, useAppSelector } from '../../../../store/hooks';
-import { CustomRepository } from '../../../../store/imageBuilderApi';
+import {
+  CustomRepository,
+  Repository,
+} from '../../../../store/imageBuilderApi';
 import {
   changeCustomRepositories,
+  changePayloadRepositories,
   selectArchitecture,
   selectCustomRepositories,
   selectDistribution,
@@ -130,13 +134,31 @@ const BulkSelect = ({
 // Utility function to convert from Content Sources to Image Builder custom repo API schema
 const convertSchemaToIBCustomRepo = (repo: ApiRepositoryResponseRead) => {
   const imageBuilderRepo: CustomRepository = {
+    // TODO review this !
     id: repo.uuid!,
     name: repo.name,
+    // TODO review this !
     baseurl: [repo.url!],
     check_gpg: false,
   };
   if (repo.gpg_key) {
     imageBuilderRepo.gpgkey = [repo.gpg_key];
+    imageBuilderRepo.check_gpg = true;
+    imageBuilderRepo.check_repo_gpg = repo.metadata_verification;
+  }
+
+  return imageBuilderRepo;
+};
+
+// Utility function to convert from Content Sources to Image Builder payload repo API schema
+const convertSchemaToIBPayloadRepo = (repo: ApiRepositoryResponseRead) => {
+  const imageBuilderRepo: Repository = {
+    baseurl: repo.url,
+    rhsm: false,
+    check_gpg: false,
+  };
+  if (repo.gpg_key) {
+    imageBuilderRepo.gpgkey = repo.gpg_key;
     imageBuilderRepo.check_gpg = true;
     imageBuilderRepo.check_repo_gpg = repo.metadata_verification;
   }
@@ -269,7 +291,13 @@ const Repositories = () => {
       convertSchemaToIBCustomRepo(repo!)
     );
 
+    const payloadRepositories = selectedRepos.map((repo) =>
+      convertSchemaToIBPayloadRepo(repo!)
+    );
+
+    // TODO reset to undefined
     dispatch(changeCustomRepositories(customRepositories));
+    dispatch(changePayloadRepositories(payloadRepositories));
   };
 
   const updateSelected = (selectedRepos: (string | undefined)[]) => {

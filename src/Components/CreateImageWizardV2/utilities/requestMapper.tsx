@@ -20,11 +20,13 @@ import {
   selectBaseUrl,
   selectBlueprintDescription,
   selectBlueprintName,
+  selectCustomRepositories,
   selectDistribution,
   selectGcpAccountType,
   selectGcpEmail,
   selectGcpShareMethod,
   selectImageTypes,
+  selectPayloadRepositories,
   selectRegistrationType,
   selectServerUrl,
 } from '../../../store/wizardSlice';
@@ -130,8 +132,8 @@ const getCustomizations = (state: RootState, orgID: string): Customizations => {
     files: undefined,
     subscription: getSubscription(state, orgID),
     packages: undefined,
-    payload_repositories: undefined,
-    custom_repositories: undefined,
+    payload_repositories: getPayloadRepositories(state),
+    custom_repositories: getCustomRepositories(state),
     openscap: undefined,
     filesystem: undefined,
     users: undefined,
@@ -182,4 +184,20 @@ const getSubscription = (
     case 'register-now':
       return { ...initialSubscription, insights: false, rhc: false };
   }
+};
+
+const getCustomRepositories = (state: RootState) => {
+  const customRepositories = selectPayloadRepositories(state);
+  if (customRepositories === undefined || customRepositories.length === 0) {
+    return undefined;
+  }
+  return customRepositories;
+};
+
+const getPayloadRepositories = (state: RootState) => {
+  const payloadRepositories = selectPayloadRepositories(state);
+  if (payloadRepositories === undefined || payloadRepositories.length === 0) {
+    return undefined;
+  }
+  return payloadRepositories;
 };
