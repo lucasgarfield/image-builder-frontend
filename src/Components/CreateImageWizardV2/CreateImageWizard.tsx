@@ -75,7 +75,11 @@ export const CustomWizardFooter = ({
   );
 };
 
-const CreateImageWizard = () => {
+type CreateImageWizardProps = {
+  startStepIndex?: number;
+};
+
+const CreateImageWizard = ({ startStepIndex = 1 }: CreateImageWizardProps) => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
 
@@ -114,7 +118,11 @@ const CreateImageWizard = () => {
     <>
       <ImageBuilderHeader />
       <section className="pf-l-page__main-section pf-c-page__main-section">
-        <Wizard onClose={() => navigate(resolveRelPath(''))} isVisitRequired>
+        <Wizard
+          startIndex={startStepIndex}
+          onClose={() => navigate(resolveRelPath(''))}
+          isVisitRequired
+        >
           <WizardStep
             name="Image output"
             id="step-image-output"

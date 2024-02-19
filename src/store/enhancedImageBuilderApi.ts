@@ -2,6 +2,15 @@ import { addNotification } from '@redhat-cloud-services/frontend-components-noti
 
 import { imageBuilderApi } from './imageBuilderApi';
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+const errorMessage = (err: any) => {
+  let msg = err.error.statusText;
+  if (err.error.data?.errors[0]?.detail) {
+    msg = err.error.data?.errors[0]?.detail;
+  }
+  return msg;
+};
+
 const enhancedApi = imageBuilderApi.enhanceEndpoints({
   addTagTypes: ['Clone', 'Compose', 'Blueprints', 'BlueprintComposes'],
   endpoints: {
@@ -44,7 +53,9 @@ const enhancedApi = imageBuilderApi.enhanceEndpoints({
               addNotification({
                 variant: 'danger',
                 title: 'Your blueprint could not be created',
-                description: `Status code ${err.status}: ${err.data.errors[0].detail}`,
+                description: `Status code ${err.error.status}: ${errorMessage(
+                  err
+                )}`,
               })
             );
           });
@@ -80,7 +91,9 @@ const enhancedApi = imageBuilderApi.enhanceEndpoints({
               addNotification({
                 variant: 'danger',
                 title: 'Your image could not be shared',
-                description: `Status code ${err.status}: ${err.data.errors[0].detail}`,
+                description: `Status code ${err.error.status}: ${errorMessage(
+                  err
+                )}`,
               })
             );
           });
@@ -99,16 +112,13 @@ const enhancedApi = imageBuilderApi.enhanceEndpoints({
             );
           })
           .catch((err) => {
-            let msg = err.error.statusText;
-            if (err.error.data?.errors[0]?.detail) {
-              msg = err.error.data?.errors[0]?.detail;
-            }
-
             dispatch(
               addNotification({
                 variant: 'danger',
                 title: 'Blueprint could not be built',
-                description: `Status code ${err.error.status}: ${msg}`,
+                description: `Status code ${err.error.status}: ${errorMessage(
+                  err
+                )}`,
               })
             );
           });
@@ -131,16 +141,13 @@ const enhancedApi = imageBuilderApi.enhanceEndpoints({
             );
           })
           .catch((err) => {
-            let msg = err.error.statusText;
-            if (err.error.data?.errors[0]?.detail) {
-              msg = err.error.data?.errors[0]?.detail;
-            }
-
             dispatch(
               addNotification({
                 variant: 'danger',
                 title: 'Your image could not be created',
-                description: 'Status code ' + err.error.status + ': ' + msg,
+                description: `Status code ${err.error.status}: ${errorMessage(
+                  err
+                )}`,
               })
             );
           });
@@ -163,7 +170,9 @@ const enhancedApi = imageBuilderApi.enhanceEndpoints({
               addNotification({
                 variant: 'danger',
                 title: 'Blueprint could not be deleted',
-                description: `Status code ${err.error.status}: ${err.error.data.errors[0].detail}`,
+                description: `Status code ${err.error.status}: ${errorMessage(
+                  err
+                )}`,
               })
             );
           });

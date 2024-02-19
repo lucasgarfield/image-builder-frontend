@@ -15,6 +15,7 @@ import {
   Spinner,
 } from '@patternfly/react-core';
 import { EllipsisVIcon } from '@patternfly/react-icons';
+import { Link } from 'react-router-dom';
 
 import { DeleteBlueprintModal } from './DeleteBlueprintModal';
 
@@ -22,6 +23,7 @@ import {
   BlueprintItem,
   useDeleteBlueprintMutation,
 } from '../../store/imageBuilderApi';
+import { resolveRelPath } from '../../Utilities/path';
 
 type blueprintProps = {
   blueprint: BlueprintItem;
@@ -69,7 +71,7 @@ const BlueprintCard = ({
             isExpanded={isOpen}
             onClick={() => setIsOpen(!isOpen)}
             variant="plain"
-            aria-label="blueprint menu toggle"
+            aria-label={`blueprint ${blueprint.name} menu toggle`}
           >
             <EllipsisVIcon aria-hidden="true" />
           </MenuToggle>
@@ -78,7 +80,14 @@ const BlueprintCard = ({
         onOpenChange={(isOpen: boolean) => setIsOpen(isOpen)}
       >
         <DropdownList>
-          <DropdownItem>Edit details</DropdownItem>
+          <DropdownItem>
+            <Link
+              to={resolveRelPath(`imagewizard/${blueprint.id}`)}
+              className="pf-v5-c-menu__item-text"
+            >
+              Edit details
+            </Link>
+          </DropdownItem>
           <DropdownItem onClick={() => setShowDeleteModal(true)}>
             Delete blueprint
           </DropdownItem>

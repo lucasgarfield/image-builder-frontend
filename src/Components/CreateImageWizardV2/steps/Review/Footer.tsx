@@ -18,6 +18,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import {
   useComposeBlueprintMutation,
   useCreateBlueprintMutation,
+  useUpdateBlueprintMutation,
 } from '../../../../store/imageBuilderApi';
 import { resolveRelPath } from '../../../../Utilities/path';
 import { mapRequestFromState } from '../../utilities/requestMapper';
@@ -30,6 +31,7 @@ const ReviewWizardFooter = () => {
   ] = useCreateBlueprintMutation();
   const [buildBlueprint, { isLoading: isBuildLoading }] =
     useComposeBlueprintMutation();
+  const [updateBlueprint] = useUpdateBlueprintMutation();
   const { auth } = useChrome();
   const navigate = useNavigate();
   const { composeId } = useParams();
@@ -55,20 +57,33 @@ const ReviewWizardFooter = () => {
   const onSave = async () => {
     const requestBody = await getBlueprintPayload();
     setIsOpen(false);
-    !composeId &&
+    if (composeId) {
       requestBody &&
-      createBlueprint({ createBlueprintRequest: requestBody });
+        updateBlueprint({ id: composeId, createBlueprintRequest: requestBody });
+    } else {
+      requestBody && createBlueprint({ createBlueprintRequest: requestBody });
+    }
   };
 
   const onSaveAndBuild = async () => {
     const requestBody = await getBlueprintPayload();
     setIsOpen(false);
-    const blueprint =
-      !composeId &&
+    if (composeId) {
       requestBody &&
-      (await createBlueprint({ createBlueprintRequest: requestBody }).unwrap());
-    blueprint && buildBlueprint({ id: blueprint.id });
-    setIsOpen(false);
+        (await updateBlueprint({
+          id: composeId,
+          createBlueprintRequest: requestBody,
+        }));
+      buildBlueprint({ id: composeId });
+    } else {
+      const blueprint =
+        !composeId &&
+        requestBody &&
+        (await createBlueprint({
+          createBlueprintRequest: requestBody,
+        }).unwrap());
+      blueprint && buildBlueprint({ id: blueprint.id });
+    }
   };
 
   return (

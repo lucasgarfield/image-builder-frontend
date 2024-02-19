@@ -3,6 +3,7 @@ import { Store } from 'redux';
 import { RootState } from '../../../store';
 import {
   AwsUploadRequestOptions,
+  BlueprintResponse,
   CreateBlueprintRequest,
   Customizations,
   GcpUploadRequestOptions,
@@ -27,7 +28,9 @@ import {
   selectImageTypes,
   selectRegistrationType,
   selectServerUrl,
+  wizardState,
 } from '../../../store/wizardSlice';
+import { GcpAccountType } from '../steps/TargetEnvironment/Gcp';
 
 /**
  * This function maps the wizard state to a valid CreateBlueprint request object
@@ -48,6 +51,72 @@ export const mapRequestFromState = (
     distribution: selectDistribution(state),
     image_requests: imageRequests,
     customizations,
+  };
+};
+
+/**
+ * This function maps the blueprint response to the wizard state, used to populate the wizard with the blueprint details
+ * @param request BlueprintResponse
+ * @param source  V1ListSourceResponseItem
+ * @returns wizardState
+ */
+export const mapRequestToState = (request: BlueprintResponse): wizardState => {
+  const gcp = request.image_requests.find(
+    (image) => image.image_type === 'gcp'
+  );
+  const aws = request.image_requests.find(
+    (image) => image.image_type === 'aws'
+  );
+  const awsUploadOptions = aws?.upload_request
+    .options as AwsUploadRequestOptions;
+  const gcpUploadOptions = gcp?.upload_request
+    .options as GcpUploadRequestOptions;
+  return {
+    details: {
+      blueprintName: request.name,
+      blueprintDescription: request.description,
+    },
+    env: {
+      serverUrl: request.customizations.subscription?.['server-url'] || '',
+      baseUrl: request.customizations.subscription?.['base-url'] || '',
+    },
+    // TODO: add openscap support
+    openScap: {
+      profile: undefined,
+      kernel: {
+        kernelAppend: '',
+      },
+      services: {
+        disabled: [],
+        enabled: [],
+      },
+    },
+    architecture: request.image_requests[0].architecture,
+    distribution: request.distribution,
+    imageTypes: request.image_requests.map((image) => image.image_type),
+    gcp: {
+      shareMethod: gcpUploadOptions?.share_with_accounts
+        ? 'withGoogle'
+        : 'withInsights',
+      accountType: gcpUploadOptions?.share_with_accounts?.[0].split(
+        ':'
+      )[0] as GcpAccountType,
+      email: gcpUploadOptions?.share_with_accounts?.[0].split(':')[1] || '',
+    },
+    aws: {
+      accountId: awsUploadOptions?.share_with_accounts?.[0] || '',
+      shareMethod: awsUploadOptions?.share_with_sources ? 'sources' : 'manual',
+      source: { id: awsUploadOptions?.share_with_sources?.[0] },
+    },
+    repositories: {
+      customRepositories: request.customizations.custom_repositories || [],
+    },
+    registration: {
+      registrationType: request.customizations?.subscription?.rhc
+        ? 'register-now-rhc'
+        : 'register-now-insights',
+      activationKey: request.customizations.subscription?.['activation-key'],
+    },
   };
 };
 

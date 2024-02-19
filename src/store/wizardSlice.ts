@@ -27,7 +27,7 @@ export type RegistrationType =
   | 'register-now-insights'
   | 'register-now-rhc';
 
-type wizardState = {
+export type wizardState = {
   env: {
     serverUrl: string;
     baseUrl: string;
@@ -197,6 +197,8 @@ export const wizardSlice = createSlice({
   initialState,
   reducers: {
     initializeWizard: () => initialState,
+    loadWizardState: (state, action: PayloadAction<wizardState>) =>
+      action.payload,
     changeServerUrl: (state, action: PayloadAction<string>) => {
       state.env.serverUrl = action.payload;
     },
@@ -329,5 +331,6 @@ export const {
   changeCustomRepositories,
   changeBlueprintName,
   changeBlueprintDescription,
+  loadWizardState,
 } = wizardSlice.actions;
 export default wizardSlice.reducer;
