@@ -475,6 +475,8 @@ export const ContentList = () => {
       default:
         return '';
     }
+    // React Hook useMemo has a missing dependency: 'templateData?.name'. Either include it or remove the dependency array - react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoading, isTemplateLoading, useLatest, snapshotDate, template]);
 
   return (

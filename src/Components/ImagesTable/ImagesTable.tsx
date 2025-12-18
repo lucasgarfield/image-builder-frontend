@@ -343,7 +343,8 @@ const ImagesTableRow = ({ compose, rowIndex }: ImagesTableRowPropTypes) => {
         const uploadType =
           compose.request.image_requests[0]?.upload_request?.type;
         const isError = currentStatus === 'failure';
-        const error = composeStatus?.image_status.error;
+        // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
+        const error = composeStatus.image_status.error;
         analytics.track(
           `${AMPLITUDE_MODULE_NAME} - Image Creation - ${isError ? 'Failure' : 'Success'}`,
           {
@@ -366,6 +367,8 @@ const ImagesTableRow = ({ compose, rowIndex }: ImagesTableRowPropTypes) => {
         lastTrackedStatusRef.current = currentStatus;
       }
     }
+    // React Hook useEffect has a missing dependency: 'isOnPremise'. Either include it or remove the dependency array - react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [analytics, userData, compose, composeStatus]);
 
   const type = compose.request.image_requests[0]?.upload_request?.type;

@@ -120,6 +120,8 @@ const PolicySelector = ({ isDisabled = false }: PolicySelectorProps) => {
         }
       }
     }
+    // React Hook useEffect has missing dependencies: 'dispatch', 'policies', 'policyID', and 'policyTitle'. Either include them or remove the dependency array - react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isSuccessPolicies]);
 
   const handleToggle = () => {
@@ -167,7 +169,8 @@ const PolicySelector = ({ isDisabled = false }: PolicySelectorProps) => {
           );
           handleServices(response.services);
           handleKernelAppend(response.kernel?.append);
-          dispatch(changeFips(response?.fips?.enabled || false));
+          // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
+          dispatch(changeFips(response.fips?.enabled || false));
           dispatch(
             setCompliancePolicy({
               policyID: selection.policyID,
@@ -211,6 +214,8 @@ const PolicySelector = ({ isDisabled = false }: PolicySelectorProps) => {
       </SelectOption>,
     ];
     for (const p of policies.data) {
+      // Unnecessary conditional, the types have no overlap - disable-autofix/@typescript-eslint/no-unnecessary-condition
+      // eslint-disable-next-line disable-autofix/@typescript-eslint/no-unnecessary-condition
       if (p === undefined) {
         continue;
       }

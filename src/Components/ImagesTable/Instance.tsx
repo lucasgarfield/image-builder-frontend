@@ -53,8 +53,10 @@ export const AwsS3Instance = ({
     'network-installer': '',
   };
 
-  const status = composeStatus?.image_status.status;
-  const options = composeStatus?.image_status.upload_status?.options;
+  // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
+  const status = composeStatus.image_status.status;
+  // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
+  const options = composeStatus.image_status.upload_status?.options;
 
   if (options && !isAwss3UploadStatus(options)) {
     throw TypeError(
@@ -107,8 +109,10 @@ export const LocalInstance = ({ compose }: LocalInstancePropTypes) => {
     return <Skeleton />;
   }
 
-  const status = composeStatus?.image_status.status;
-  const options = composeStatus?.image_status.upload_status
+  // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
+  const status = composeStatus.image_status.status;
+  // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
+  const options = composeStatus.image_status.upload_status
     ?.options as unknown as LocalUploadStatus;
 
   if (status !== 'success') {

@@ -26,6 +26,8 @@ const ImportImageWizard = () => {
         title: 'No blueprint was imported',
       });
     }
+    // React Hook useEffect has missing dependencies: 'addNotification' and 'navigate'. Either include them or remove the dependency array - react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [blueprint, dispatch]);
   return <CreateImageWizard />;
 };

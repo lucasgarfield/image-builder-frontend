@@ -260,8 +260,9 @@ export const navigateToRepositories = async (page: Page) => {
       zeroState.waitFor({ state: 'visible', timeout: 30000 }),
     ]);
   } catch (error) {
+    // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
     throw new Error(
-      `Neither repositories list nor zero state appeared: ${(error as Error)?.message}`,
+      `Neither repositories list nor zero state appeared: ${(error as Error).message}`,
     );
   }
 

@@ -34,6 +34,8 @@ export const AwsTarget = process.env.IS_ON_PREMISE
         return <Skeleton />;
       }
 
-      const text = `${targetOptions.aws} (${(data?.data.length ?? 0) + 1})`;
+      // Unnecessary conditional, expected left-hand side of `??` operator to be possibly null or undefined - disable-autofix/@typescript-eslint/no-unnecessary-condition
+      // eslint-disable-next-line disable-autofix/@typescript-eslint/no-unnecessary-condition
+      const text = `${targetOptions.aws} (${(data.data.length ?? 0) + 1})`;
       return <>{text}</>;
     };

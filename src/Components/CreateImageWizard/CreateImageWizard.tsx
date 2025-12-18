@@ -311,6 +311,8 @@ const CreateImageWizard = ({ isEdit }: CreateImageWizardProps) => {
     if (!timezone) {
       dispatch(changeTimezone(defaultTimezone));
     }
+    // React Hook useEffect has a missing dependency: 'timezone'. Either include it or remove the dependency array - react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [distribution, targetEnvironments, isEdit, dispatch]);
 
   // Duplicating some of the logic from the Wizard component to allow for custom nav items status

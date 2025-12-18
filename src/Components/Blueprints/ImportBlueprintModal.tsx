@@ -219,6 +219,8 @@ export const ImportBlueprintModal: React.FunctionComponent<
       };
       parseAndImport();
     }
+    // React Hook React.useEffect has missing dependencies: 'addNotification' and 'handleRepositoryImport'. Either include them or remove the dependency array - react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filename, fileContent]);
 
   const handleClear = () => {

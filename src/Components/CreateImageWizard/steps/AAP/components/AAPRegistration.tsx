@@ -39,12 +39,13 @@ const AAPRegistration = () => {
   const stepValidation = useAAPValidation();
 
   const isHttpsUrl = callbackUrl?.toLowerCase().startsWith('https://') || false;
-  const shouldShowCaInput = !isHttpsUrl || (isHttpsUrl && !tlsConfirmation);
+  // Unnecessary conditional, value is always truthy - disable-autofix/@typescript-eslint/no-unnecessary-condition
+  const shouldShowCaInput = !isHttpsUrl || !tlsConfirmation;
 
   const validated = stepValidation.errors['certificate']
     ? 'error'
-    : stepValidation.errors['certificate'] === undefined &&
-        tlsCertificateAuthority &&
+    : // Unnecessary conditional, the types have no overlap - disable-autofix/@typescript-eslint/no-unnecessary-condition
+      tlsCertificateAuthority &&
         validateMultipleCertificates(tlsCertificateAuthority).validCertificates
           .length > 0
       ? 'success'

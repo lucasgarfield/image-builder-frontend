@@ -58,7 +58,8 @@ const ReviewWizardFooter = () => {
   const getBlueprintPayload = async () => {
     if (!isOnPremise) {
       const userData = await auth.getUser();
-      const orgId = userData?.identity?.internal?.org_id;
+      // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
+      const orgId = userData.identity?.internal?.org_id;
       const requestBody = orgId && mapRequestFromState(store, orgId);
       return requestBody;
     }

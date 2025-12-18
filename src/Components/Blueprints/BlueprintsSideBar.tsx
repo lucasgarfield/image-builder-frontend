@@ -179,6 +179,8 @@ const BlueprintsSidebar = () => {
 const BlueprintSearch = ({ blueprintsTotal }: blueprintSearchProps) => {
   const blueprintSearchInput = useAppSelector(selectBlueprintSearchInput);
   const dispatch = useAppDispatch();
+  // React Hook useCallback received a function whose dependencies are unknown. Pass an inline function instead - react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const debouncedSearch = useCallback(
     debounce((filter) => {
       dispatch(setBlueprintsOffset(0));

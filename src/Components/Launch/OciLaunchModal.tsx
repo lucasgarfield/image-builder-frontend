@@ -41,7 +41,8 @@ export const OciLaunchModal = ({ isExpired, compose }: LaunchProps) => {
     return <Skeleton />;
   }
 
-  const options = data?.image_status.upload_status?.options;
+  // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
+  const options = data.image_status.upload_status?.options;
 
   if (options && !isOciUploadStatus(options)) {
     throw TypeError(
@@ -69,10 +70,11 @@ export const OciLaunchModal = ({ isExpired, compose }: LaunchProps) => {
 
   return (
     <Fragment>
+      {/* Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition */}
       <Button
         variant='link'
         isInline
-        isDisabled={data?.image_status.status !== 'success'}
+        isDisabled={data.image_status.status !== 'success'}
         onClick={handleModalToggle}
       >
         Image link

@@ -71,8 +71,10 @@ const RepoName = ({ repoUuid }: repoPropType) => {
         - query finished and the repo was found -> render the name of the repo
         - query finished, but the repo was not found -> render an error
       */}
-      {isSuccess && data?.data?.[0]?.name && <p>{data.data[0].name}</p>}
-      {isSuccess && !data?.data?.[0]?.name && errorLoading()}
+      {/* Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition */}
+      {isSuccess && data.data?.[0]?.name && <p>{data.data[0].name}</p>}
+      {/* Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition */}
+      {isSuccess && !data.data?.[0]?.name && errorLoading()}
       {isFetching && <Spinner size='md' />}
       {isError && errorLoading()}
     </>
@@ -187,7 +189,8 @@ export const SnapshotTable = ({
               </Tr>
             </Thead>
             <Tbody>
-              {data?.data?.map(({ uuid, name, last_snapshot }, pkgIndex) => (
+              {/* Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition */}
+              {data.data?.map(({ uuid, name, last_snapshot }, pkgIndex) => (
                 <Tr key={pkgIndex}>
                   <Td>{name}</Td>
                   <Td>

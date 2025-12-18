@@ -623,7 +623,8 @@ describe('Step Packages', () => {
       // What we don't want is jumping around during the selection/unselection process
       expect(rows).toHaveLength(6); // Still have all 6 modules
       const moduleNames = rows.map((row) => {
-        const match = row.textContent?.match(/(\w+Module)/);
+        // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
+        const match = row.textContent.match(/(\w+Module)/);
         return match ? match[1] : '';
       });
       expect(moduleNames).toContain('alphaModule');

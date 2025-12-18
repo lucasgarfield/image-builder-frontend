@@ -92,7 +92,8 @@ startAppListening({
           distribution: distribution,
         })(state as serviceState);
 
-    const allowedImageTypes = architecturesResponse?.data?.find(
+    // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
+    const allowedImageTypes = architecturesResponse.data?.find(
       (elem) => elem.arch === architecture,
     )?.image_types;
 

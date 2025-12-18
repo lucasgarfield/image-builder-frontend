@@ -152,7 +152,7 @@ export default function Snapshot() {
             </Content>
           </Grid>
         </>
-      ) : isTemplatesEnabled && selectedOption === 'template' ? (
+      ) : /* Unnecessary conditional, comparison is always true, since `"template" === "template"` is true - disable-autofix/@typescript-eslint/no-unnecessary-condition */ isTemplatesEnabled ? (
         <>
           <Title headingLevel='h1' size='xl'>
             Use a content template

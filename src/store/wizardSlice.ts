@@ -397,7 +397,8 @@ export const selectOrgId = (state: RootState) => {
 };
 
 export const selectSatelliteRegistrationCommand = (state: RootState) => {
-  return state.wizard.registration.satelliteRegistration?.command;
+  // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
+  return state.wizard.registration.satelliteRegistration.command;
 };
 
 export const selectSatelliteCaCertificate = (state: RootState) => {
@@ -409,19 +410,23 @@ export const selectAapRegistration = (state: RootState) => {
 };
 
 export const selectAapCallbackUrl = (state: RootState) => {
-  return state.wizard.aapRegistration?.callbackUrl;
+  // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
+  return state.wizard.aapRegistration.callbackUrl;
 };
 
 export const selectAapHostConfigKey = (state: RootState) => {
-  return state.wizard.aapRegistration?.hostConfigKey;
+  // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
+  return state.wizard.aapRegistration.hostConfigKey;
 };
 
 export const selectAapTlsCertificateAuthority = (state: RootState) => {
-  return state.wizard.aapRegistration?.tlsCertificateAuthority;
+  // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
+  return state.wizard.aapRegistration.tlsCertificateAuthority;
 };
 
 export const selectAapTlsConfirmation = (state: RootState) => {
-  return state.wizard.aapRegistration?.skipTlsVerification;
+  // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
+  return state.wizard.aapRegistration.skipTlsVerification;
 };
 
 export const selectComplianceProfileID = (state: RootState) => {
@@ -545,7 +550,8 @@ export const selectBlueprintDescription = (state: RootState) => {
 };
 
 export const selectFirstBootScript = (state: RootState) => {
-  return state.wizard.firstBoot?.script;
+  // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
+  return state.wizard.firstBoot.script;
 };
 
 export const selectTimezone = (state: RootState) => {

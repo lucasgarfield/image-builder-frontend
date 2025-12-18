@@ -254,11 +254,14 @@ const getLatestRelease = (distribution: Distributions) => {
 };
 
 const azureTargetOptions = (options: AzureUploadRequestOptions) => {
+  // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
   const resourceGroupIsDefined =
-    options?.resource_group && options.resource_group !== '';
+    options.resource_group && options.resource_group !== '';
+  // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
   const subscriptionIdIsDefined =
-    options?.subscription_id && options.subscription_id !== '';
-  const tenandIdIsDefined = options?.tenant_id && options.tenant_id !== '';
+    options.subscription_id && options.subscription_id !== '';
+  // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
+  const tenandIdIsDefined = options.tenant_id && options.tenant_id !== '';
 
   const isAnyDefined =
     resourceGroupIsDefined || subscriptionIdIsDefined || tenandIdIsDefined;
@@ -267,17 +270,22 @@ const azureTargetOptions = (options: AzureUploadRequestOptions) => {
     // Edge case but if one field is selected, that means that azure was chosen at some point,
     // and we should show an error for other missing fields
     return {
-      tenantId: options?.tenant_id || '',
-      subscriptionId: options?.subscription_id || '',
-      resourceGroup: options?.resource_group || '',
-      hyperVGeneration: options?.hyper_v_generation || 'V1',
+      // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
+      tenantId: options.tenant_id || '',
+      // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
+      subscriptionId: options.subscription_id || '',
+      // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
+      resourceGroup: options.resource_group || '',
+      // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
+      hyperVGeneration: options.hyper_v_generation || 'V1',
     };
   } else {
     return {
       tenantId: undefined,
       subscriptionId: undefined,
       resourceGroup: undefined,
-      hyperVGeneration: options?.hyper_v_generation || 'V1',
+      // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
+      hyperVGeneration: options.hyper_v_generation || 'V1',
     };
   }
 };
@@ -322,21 +330,25 @@ function commonRequestToState(
   const azureUploadOptions = azure?.upload_request
     .options as AzureUploadRequestOptions;
 
-  const arch =
-    request.image_requests[0]?.architecture || initialState.architecture;
-  if (arch !== 'x86_64' && arch !== 'aarch64') {
+  // Unnecessary conditional, value is always truthy - disable-autofix/@typescript-eslint/no-unnecessary-condition
+  const arch = request.image_requests[0].architecture;
+  // Unnecessary conditional, comparison is always false, since `"aarch64" !== "aarch64"` is false - disable-autofix/@typescript-eslint/no-unnecessary-condition
+  if (arch !== 'x86_64') {
     throw new Error(`image type: ${arch} has no implementation yet`);
   }
 
   let oscapProfile = undefined;
   let compliancePolicyID = undefined;
-  if (request.customizations?.openscap) {
-    const oscapAsProfile = request.customizations?.openscap as OpenScapProfile;
+  // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
+  if (request.customizations.openscap) {
+    // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
+    const oscapAsProfile = request.customizations.openscap as OpenScapProfile;
     if (oscapAsProfile.profile_id !== '') {
       oscapProfile = oscapAsProfile.profile_id as DistributionProfileItem;
     }
+    // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
     const oscapAsCompliance = request.customizations
-      ?.openscap as OpenScapCompliance;
+      .openscap as OpenScapCompliance;
     if (oscapAsCompliance.policy_id !== '') {
       compliancePolicyID = oscapAsCompliance.policy_id;
     }
@@ -373,6 +385,8 @@ function commonRequestToState(
               policyTitle: undefined,
             }
           : initialState.compliance,
+    // Unnecessary conditional, value is always truthy - disable-autofix/@typescript-eslint/no-unnecessary-condition
+    // eslint-disable-next-line disable-autofix/@typescript-eslint/no-unnecessary-condition
     firstBoot: request.customizations
       ? {
           script: getFirstBootScript(request.customizations.files),
@@ -383,8 +397,10 @@ function commonRequestToState(
       : request.customizations.disk
         ? ('advanced' as FscModeType)
         : ('automatic' as FscModeType),
+    // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
     disk: request.customizations.disk
       ? {
+          // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
           type: request.customizations.disk.type || undefined,
           minsize: request.customizations.disk.minsize || '',
           partitions: request.customizations.disk.partitions.map((d) =>
@@ -396,9 +412,11 @@ function commonRequestToState(
           partitions: [],
           type: undefined,
         },
-    fileSystem: request.customizations?.filesystem
+    // Unnecessary conditional, value is always truthy - disable-autofix/@typescript-eslint/no-unnecessary-condition
+    fileSystem: request.customizations.filesystem
       ? {
-          partitions: request.customizations?.filesystem.map((fs) =>
+          // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
+          partitions: request.customizations.filesystem.map((fs) =>
             convertFilesystemToPartition(fs),
           ),
         }
@@ -407,50 +425,67 @@ function commonRequestToState(
         },
     partitioning_mode: request.customizations.partitioning_mode,
     architecture: arch,
-    distribution:
-      getLatestRelease(request.distribution) || initialState.distribution,
+    // Unnecessary conditional, value is always truthy - disable-autofix/@typescript-eslint/no-unnecessary-condition
+    distribution: getLatestRelease(request.distribution),
     imageTypes: request.image_requests.map((image) => image.image_type),
     azure: azureTargetOptions(azureUploadOptions),
     gcp: {
-      shareMethod: (gcpUploadOptions?.share_with_accounts
+      // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
+      shareMethod: (gcpUploadOptions.share_with_accounts
         ? 'withGoogle'
         : 'withInsights') as GcpShareMethod,
-      accountType: gcpUploadOptions?.share_with_accounts?.[0].split(
+      // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
+      accountType: gcpUploadOptions.share_with_accounts?.[0].split(
         ':',
       )[0] as GcpAccountType,
-      email: gcpUploadOptions?.share_with_accounts?.[0].split(':')[1] || '',
+      // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
+      email: gcpUploadOptions.share_with_accounts?.[0].split(':')[1] || '',
     },
     aws: {
-      accountId: awsUploadOptions?.share_with_accounts?.[0] || '',
-      shareMethod: (awsUploadOptions?.share_with_sources
+      // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
+      accountId: awsUploadOptions.share_with_accounts?.[0] || '',
+      // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
+      shareMethod: (awsUploadOptions.share_with_sources
         ? 'sources'
         : 'manual') as AwsShareMethod,
-      source: { id: awsUploadOptions?.share_with_sources?.[0] },
-      sourceId: awsUploadOptions?.share_with_sources?.[0],
-      region: awsUploadOptions?.region,
+      // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
+      source: { id: awsUploadOptions.share_with_sources?.[0] },
+      // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
+      sourceId: awsUploadOptions.share_with_sources?.[0],
+      // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
+      region: awsUploadOptions.region,
     },
     snapshotting: {
-      useLatest: !snapshot_date && !request.image_requests[0]?.content_template,
+      // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
+      useLatest: !snapshot_date && !request.image_requests[0].content_template,
       snapshotDate: snapshot_date,
-      template: request.image_requests[0]?.content_template || '',
-      templateName: request.image_requests[0]?.content_template_name || '',
+      // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
+      template: request.image_requests[0].content_template || '',
+      // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
+      templateName: request.image_requests[0].content_template_name || '',
     },
     repositories: {
+      // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
+      // eslint-disable-next-line disable-autofix/@typescript-eslint/no-unnecessary-condition
       customRepositories: request.customizations?.custom_repositories || [],
+      // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
+      // eslint-disable-next-line disable-autofix/@typescript-eslint/no-unnecessary-condition
       payloadRepositories: request.customizations?.payload_repositories || [],
       recommendedRepositories: [],
       redHatRepositories: [],
     },
+    // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
     packages:
-      request.customizations?.packages
+      request.customizations.packages
         ?.filter((pkg) => !pkg.startsWith('@'))
         .map((pkg) => ({
           name: pkg,
           summary: '',
           repository: '' as PackageRepository,
         })) || [],
+    // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
     groups:
-      request.customizations?.packages
+      request.customizations.packages
         ?.filter((grp) => grp.startsWith('@'))
         .map((grp) => ({
           name: grp.substr(1),
@@ -460,16 +495,24 @@ function commonRequestToState(
         })) || [],
     enabled_modules: request.customizations.enabled_modules || [],
     locale: {
+      // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
       languages: request.customizations.locale?.languages || [],
+      // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
       keyboard: request.customizations.locale?.keyboard || '',
     },
     services: {
-      enabled: request.customizations?.services?.enabled || [],
-      masked: request.customizations?.services?.masked || [],
+      // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
+      enabled: request.customizations.services?.enabled || [],
+      // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
+      masked: request.customizations.services?.masked || [],
+      // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
+      // eslint-disable-next-line disable-autofix/@typescript-eslint/no-unnecessary-condition
       disabled: request.customizations?.services?.disabled || [],
     },
     kernel: {
       name: request.customizations.kernel?.name || '',
+      // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
+      // eslint-disable-next-line disable-autofix/@typescript-eslint/no-unnecessary-condition
       append: request.customizations?.kernel?.append?.split(' ') || [],
     },
     timezone: {
@@ -485,7 +528,8 @@ function commonRequestToState(
       },
     },
     fips: {
-      enabled: request.customizations.fips?.enabled || false,
+      // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
+      enabled: request.customizations.fips.enabled || false,
     },
   };
 }
@@ -520,13 +564,17 @@ export const mapRequestToState = (request: BlueprintResponse): wizardState => {
       },
     },
     aapRegistration: {
+      // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
       callbackUrl:
-        request.customizations?.aap_registration?.ansible_callback_url,
-      hostConfigKey: request.customizations?.aap_registration?.host_config_key,
+        request.customizations.aap_registration?.ansible_callback_url,
+      // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
+      hostConfigKey: request.customizations.aap_registration?.host_config_key,
+      // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
       tlsCertificateAuthority:
-        request.customizations?.aap_registration?.tls_certificate_authority,
+        request.customizations.aap_registration?.tls_certificate_authority,
+      // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
       skipTlsVerification:
-        request.customizations?.aap_registration?.skip_tls_verification,
+        request.customizations.aap_registration?.skip_tls_verification,
     },
     ...commonRequestToState(request),
   };
@@ -539,11 +587,15 @@ export function mapToCustomRepositories(
   return [
     {
       id: repo.uuid,
+      // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
       name: repo.name,
       baseurl: repo.url ? [repo.url] : undefined,
       gpgkey: repo.gpg_key ? [repo.gpg_key] : undefined,
+      // Unnecessary conditional, expected left-hand side of `??` operator to be possibly null or undefined - disable-autofix/@typescript-eslint/no-unnecessary-condition
       check_gpg: repo.metadata_verification ?? undefined,
+      // Unnecessary conditional, expected left-hand side of `??` operator to be possibly null or undefined - disable-autofix/@typescript-eslint/no-unnecessary-condition
       check_repo_gpg: repo.metadata_verification ?? undefined,
+      // Unnecessary conditional, expected left-hand side of `??` operator to be possibly null or undefined - disable-autofix/@typescript-eslint/no-unnecessary-condition
       module_hotfixes: repo.module_hotfixes ?? undefined,
       enabled: true,
     },
@@ -571,20 +623,27 @@ export const mapExportRequestToState = (
   return {
     wizardMode,
     metadata: {
+      // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
+      // eslint-disable-next-line disable-autofix/@typescript-eslint/no-unnecessary-condition
       parent_id: request.metadata?.parent_id || null,
+      // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
+      // eslint-disable-next-line disable-autofix/@typescript-eslint/no-unnecessary-condition
       exported_at: request.metadata?.exported_at || '',
+      // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
+      // eslint-disable-next-line disable-autofix/@typescript-eslint/no-unnecessary-condition
       is_on_prem: request.metadata?.is_on_prem || false,
     },
     env: initialState.env,
     registration: initialState.registration,
     aapRegistration: {
-      callbackUrl:
-        request.customizations?.aap_registration?.ansible_callback_url,
-      hostConfigKey: request.customizations?.aap_registration?.host_config_key,
+      // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
+      callbackUrl: request.customizations.aap_registration.ansible_callback_url,
+      hostConfigKey: request.customizations.aap_registration.host_config_key,
+      // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
       tlsCertificateAuthority:
-        request.customizations?.aap_registration?.tls_certificate_authority,
+        request.customizations.aap_registration.tls_certificate_authority,
       skipTlsVerification:
-        request.customizations?.aap_registration?.skip_tls_verification,
+        request.customizations.aap_registration.skip_tls_verification,
     },
     ...commonRequestToState(blueprintResponse),
   };
@@ -804,6 +863,8 @@ const getCustomizations = (state: RootState, orgID: string): Customizations => {
     ignition: undefined,
     partitioning_mode: selectPartitioningMode(state),
     fips: getFips(state),
+    // Unnecessary conditional, value is always truthy - disable-autofix/@typescript-eslint/no-unnecessary-condition
+
     cacerts:
       satCert && selectRegistrationType(state) === 'register-satellite'
         ? {
@@ -816,7 +877,8 @@ const getCustomizations = (state: RootState, orgID: string): Customizations => {
 
 const getServices = (state: RootState): Services | undefined => {
   const services = selectServices(state);
-  const enabledSvcs = services.enabled || [];
+  // Unnecessary conditional, value is always truthy - disable-autofix/@typescript-eslint/no-unnecessary-condition
+  const enabledSvcs = services.enabled;
   if (
     enabledSvcs.length === 0 &&
     services.masked.length === 0 &&

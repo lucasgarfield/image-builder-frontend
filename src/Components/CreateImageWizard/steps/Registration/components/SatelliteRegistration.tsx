@@ -27,9 +27,10 @@ const SatelliteRegistration = () => {
   const caCertificate = useAppSelector(selectSatelliteCaCertificate);
   const [isRejected, setIsRejected] = React.useState(false);
   const stepValidation = useRegistrationValidation();
+  // Unnecessary conditional, the types have no overlap - disable-autofix/@typescript-eslint/no-unnecessary-condition
   const validated = stepValidation.errors['certificate']
     ? 'error'
-    : stepValidation.errors['certificate'] === undefined && caCertificate
+    : caCertificate
       ? 'success'
       : 'default';
 
