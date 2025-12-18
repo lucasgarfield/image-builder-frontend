@@ -18,7 +18,6 @@ export const useGetUser = (auth: { getUser(): Promise<void | ChromeUser> }) => {
         setOrgId(id);
       }
     })();
-    // React Hook useEffect has a missing dependency: 'auth'. Either include it or remove the dependency array - react-hooks/exhaustive-deps
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOnPremise]);
 

@@ -81,7 +81,6 @@ export const GcpLaunchModal = ({ compose }: LaunchProps) => {
 
   return (
     <Fragment>
-      {/* Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition */}
       <Button
         variant='link'
         isInline

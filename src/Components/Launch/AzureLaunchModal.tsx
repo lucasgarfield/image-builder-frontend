@@ -35,7 +35,6 @@ export const AzureLaunchModal = ({ compose }: LaunchProps) => {
     return <Skeleton />;
   }
 
-  // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
   const options = data.image_status.upload_status?.options;
 
   if (options && !isAzureUploadStatus(options)) {
@@ -50,7 +49,6 @@ export const AzureLaunchModal = ({ compose }: LaunchProps) => {
 
   return (
     <Fragment>
-      {/* Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition */}
       <Button
         variant='link'
         isInline

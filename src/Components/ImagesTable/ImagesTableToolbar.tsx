@@ -83,15 +83,11 @@ const ImagesTableToolbar: React.FC<imagesTableToolbarProps> = ({
 
   const { trigger: fixupBlueprint } = useFixupBlueprintMutation();
 
-  // Unnecessary conditional, expected left-hand side of `??` operator to be possibly null or undefined - disable-autofix/@typescript-eslint/no-unnecessary-condition
-  // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
   const lintWarnings = React.useMemo(
     () => blueprintDetails.lint.warnings,
     [blueprintDetails],
   );
 
-  // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
-  // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
   // eslint-disable-next-line disable-autofix/@typescript-eslint/no-unnecessary-condition
   const hasErrors = !!blueprintDetails.lint?.errors?.length;
   const hasWarnings = lintWarnings.length > 0;
@@ -152,7 +148,6 @@ const ImagesTableToolbar: React.FC<imagesTableToolbarProps> = ({
 
   const isBlueprintDistroCentos8 = () => {
     if (isSuccessBlueprintsCompose) {
-      // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
       return (
         blueprintsComposes.data[0].request.distribution ===
         ('centos-8' as Distributions)

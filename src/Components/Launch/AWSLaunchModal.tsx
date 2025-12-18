@@ -35,7 +35,6 @@ export const AWSLaunchModal = ({ compose }: LaunchProps) => {
     return <Skeleton />;
   }
 
-  // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
   const options = data.image_status.upload_status?.options;
 
   if (options && !isAwsUploadRequestOptions(options)) {
@@ -44,7 +43,6 @@ export const AWSLaunchModal = ({ compose }: LaunchProps) => {
     );
   }
 
-  // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
   const amiId =
     data.image_status.status === 'success' &&
     data.image_status.upload_status?.options &&
@@ -58,7 +56,6 @@ export const AWSLaunchModal = ({ compose }: LaunchProps) => {
 
   return (
     <Fragment>
-      {/* Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition */}
       <Button
         variant='link'
         isInline

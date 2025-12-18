@@ -31,7 +31,6 @@ const ImageOutputStep = () => {
     if (!isCustomName && blueprintName !== defaultName) {
       dispatch(changeBlueprintName(defaultName));
     }
-    // React Hook useEffect has a missing dependency: 'blueprintName'. Either include it or remove the dependency array - react-hooks/exhaustive-deps
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dispatch, distribution, arch, isCustomName]);
 

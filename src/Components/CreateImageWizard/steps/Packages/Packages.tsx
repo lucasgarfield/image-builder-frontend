@@ -338,7 +338,6 @@ const Packages = () => {
         });
       }
     }
-    // React Hook useEffect has missing dependencies: 'isOnPremise' and 'reposInTemplate'. Either include them or remove the dependency array - react-hooks/exhaustive-deps
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     customRepositories,
@@ -365,7 +364,6 @@ const Packages = () => {
       searchDistroGroups({
         apiContentUnitSearchRequest: {
           search: debouncedSearchTerm.substring(1),
-          // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
           urls: distroRepositories
             .filter((archItem) => {
               return archItem.arch === arch;
@@ -659,7 +657,6 @@ const Packages = () => {
             </Thead>
             <Tbody>
               <Tr>
-                {/* Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition */}
                 {isSelectingPackage ? (
                   <Td>{isSelectingPackage.name}</Td>
                 ) : (
@@ -856,7 +853,6 @@ const Packages = () => {
         return [];
       }
     }
-    // React Hook useMemo has an unnecessary dependency: 'debouncedSearchTerm'. Either exclude it or remove the dependency array - react-hooks/exhaustive-deps
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     dataDistroGroups,
@@ -898,7 +894,6 @@ const Packages = () => {
     isSelecting: boolean,
   ) => {
     if (isSelecting) {
-      // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
       if (
         isSuccessEpelRepo &&
         epelRepo.data &&
@@ -928,7 +923,6 @@ const Packages = () => {
         dispatch(removeModule(pkg.module_name));
       }
       setCurrentlyRemovedPackages((last) => [...last, pkg]);
-      // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
       if (
         isSuccessEpelRepo &&
         epelRepo.data &&
@@ -947,7 +941,6 @@ const Packages = () => {
     isSelecting: boolean,
   ) => {
     if (isSelecting) {
-      // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
       if (
         isSuccessEpelRepo &&
         epelRepo.data &&
@@ -961,7 +954,6 @@ const Packages = () => {
       }
     } else {
       dispatch(removeGroup(grp.name));
-      // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
       if (
         isSuccessEpelRepo &&
         epelRepo.data &&
@@ -980,7 +972,6 @@ const Packages = () => {
       | React.MouseEvent<HTMLElement, MouseEvent>,
     _selected: boolean,
   ) => {
-    // Unnecessary conditional, expected left-hand side of `??` operator to be possibly null or undefined - disable-autofix/@typescript-eslint/no-unnecessary-condition
     // eslint-disable-next-line disable-autofix/@typescript-eslint/no-unnecessary-condition
     const id = (event.currentTarget as HTMLElement).id ?? '';
     setCurrentlyRemovedPackages([]);
@@ -1062,7 +1053,6 @@ const Packages = () => {
 
   const getPackageUniqueKey = (pkg: IBPackageWithRepositoryInfo): string => {
     try {
-      // Unnecessary conditional, value is always falsy - disable-autofix/@typescript-eslint/no-unnecessary-condition
       if (!pkg.name) {
         return `invalid_${Date.now()}`;
       }
@@ -1111,7 +1101,6 @@ const Packages = () => {
   >('asc');
 
   const sortedPackages = useMemo(() => {
-    // Unnecessary conditional, value is always falsy - disable-autofix/@typescript-eslint/no-unnecessary-condition
     if (!Array.isArray(transformedPackages)) {
       return [];
     }
@@ -1304,13 +1293,11 @@ const Packages = () => {
                     bodyContent={
                       <div
                         style={
-                          // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
                           grp.package_list.length > 0
                             ? { height: '40em', overflow: 'scroll' }
                             : {}
                         }
                       >
-                        {/* Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition */}
                         {grp.package_list.length > 0 ? (
                           <Table
                             variant='compact'

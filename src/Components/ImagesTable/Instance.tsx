@@ -53,9 +53,7 @@ export const AwsS3Instance = ({
     'network-installer': '',
   };
 
-  // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
   const status = composeStatus.image_status.status;
-  // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
   const options = composeStatus.image_status.upload_status?.options;
 
   if (options && !isAwss3UploadStatus(options)) {
@@ -109,9 +107,7 @@ export const LocalInstance = ({ compose }: LocalInstancePropTypes) => {
     return <Skeleton />;
   }
 
-  // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
   const status = composeStatus.image_status.status;
-  // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
   const options = composeStatus.image_status.upload_status
     ?.options as unknown as LocalUploadStatus;
 

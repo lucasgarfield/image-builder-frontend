@@ -80,7 +80,6 @@ export const AwsDetailsStatus = ({ compose }: ComposeStatusPropTypes) => {
     return <></>;
   }
 
-  // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
   switch (data.image_status.status) {
     case 'failure': {
       return (
@@ -116,7 +115,6 @@ export const CloudStatus = ({ compose }: CloudStatusPropTypes) => {
     return <Skeleton />;
   }
 
-  // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
   switch (data.image_status.status) {
     case 'failure': {
       return (
@@ -231,7 +229,6 @@ export const ExpiringStatus = ({
 
   if (status === 'failure') {
     return (
-      // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
       <ErrorStatus
         icon={statuses[status].icon}
         text={statuses[status].text}
@@ -258,13 +255,11 @@ export const LocalStatus = ({ compose }: LocalStatusPropTypes) => {
     return <Skeleton />;
   }
 
-  // Unnecessary conditional, value is always truthy - disable-autofix/@typescript-eslint/no-unnecessary-condition
   // eslint-disable-next-line disable-autofix/@typescript-eslint/no-unnecessary-condition
   const status = composeStatus.image_status.status || 'failure';
 
   if (status === 'failure') {
     return (
-      // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
       <ErrorStatus
         icon={statuses[status].icon}
         text={statuses[status].text}

@@ -126,7 +126,6 @@ const readComposes = async (bpID: string) => {
       superuser: 'try',
     },
   );
-  // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
   const bpEntries = Object.entries(bpInfo.entries || {});
   for (const entry of bpEntries) {
     if (entry[0] === `${bpID}.json`) {
@@ -310,7 +309,6 @@ export const cockpitApi = contentSourcesApi.injectEndpoints({
               superuser: 'try',
             });
 
-            // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
             const entries = Object.entries(info.entries || {});
             let blueprints: BlueprintItem[] = await Promise.all(
               entries.map(async ([filename]) => {
@@ -622,7 +620,6 @@ export const cockpitApi = contentSourcesApi.injectEndpoints({
               superuser: 'try',
             });
             let composes: ComposesResponseItem[] = [];
-            // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
             const entries = Object.entries(info.entries || {});
             for (const entry of entries) {
               composes = composes.concat(await readComposes(entry[0]));
@@ -684,7 +681,6 @@ export const cockpitApi = contentSourcesApi.injectEndpoints({
             const info = await fsinfo(blueprintsDir, ['entries'], {
               superuser: 'try',
             });
-            // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
             const entries = Object.entries(info.entries || {});
             for (const bpEntry of entries) {
               const request = await cockpit
@@ -692,7 +688,6 @@ export const cockpitApi = contentSourcesApi.injectEndpoints({
                 .read();
               return {
                 data: {
-                  // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
                   image_status: resp.data.image_status,
                   request: JSON.parse(request),
                 },

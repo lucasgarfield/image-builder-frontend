@@ -39,7 +39,6 @@ const AAPRegistration = () => {
   const stepValidation = useAAPValidation();
 
   const isHttpsUrl = callbackUrl?.toLowerCase().startsWith('https://') || false;
-  // Unnecessary conditional, value is always truthy - disable-autofix/@typescript-eslint/no-unnecessary-condition
   const shouldShowCaInput = !isHttpsUrl || !tlsConfirmation;
 
   const validated = stepValidation.errors['certificate']

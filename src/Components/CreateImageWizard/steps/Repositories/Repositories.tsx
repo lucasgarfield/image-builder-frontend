@@ -183,7 +183,6 @@ const Repositories = () => {
     ) {
       setToggleSelected('toggle-group-all');
     }
-    // React Hook useEffect has a missing dependency: 'requiredRedHatRepoUUIDs.length'. Either include it or remove the dependency array - react-hooks/exhaustive-deps
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected, toggleSelected]);
 
@@ -246,7 +245,6 @@ const Repositories = () => {
   ) => {
     let reposToAdd: ApiRepositoryResponseRead[] = [];
     // Check if array of items
-    // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
     if ((repo as ApiRepositoryResponseRead[]).length) {
       reposToAdd = (repo as ApiRepositoryResponseRead[]).filter(
         (r) =>
@@ -257,7 +255,6 @@ const Repositories = () => {
     } else {
       // Then it should be a single item
       const singleRepo = repo as ApiRepositoryResponseRead;
-      // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
       if (
         singleRepo.uuid &&
         !isRepoDisabled(singleRepo, selected.has(singleRepo.uuid))[0] &&
@@ -310,7 +307,6 @@ const Repositories = () => {
   const removeSelected = (
     repo: ApiRepositoryResponseRead | ApiRepositoryResponseRead[],
   ) => {
-    // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
     if ((repo as ApiRepositoryResponseRead[]).length) {
       const itemsToRemove = new Set(
         (repo as ApiRepositoryResponseRead[]).map(({ uuid }) => uuid),
@@ -331,7 +327,6 @@ const Repositories = () => {
       return;
     }
 
-    // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
     const uuidToRemove = (repo as ApiRepositoryResponseRead).uuid;
     if (uuidToRemove) {
       dispatch(
@@ -352,7 +347,6 @@ const Repositories = () => {
     selected: boolean,
   ) => {
     if (selected) return addSelected(repo);
-    // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
     if ((repo as ApiRepositoryResponseRead[]).length) {
       const initiallySelectedItems = (repo as ApiRepositoryResponseRead[]).map(
         ({ uuid }) => uuid,
@@ -553,7 +547,6 @@ const Repositories = () => {
       contentType: 'rpm',
       limit: perPage,
       offset: perPage * (page - 1),
-      // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
       uuid:
         selectedTemplateData && selectedTemplateData.repository_uuids
           ? selectedTemplateData.repository_uuids.join(',')
@@ -632,7 +625,6 @@ const Repositories = () => {
         ),
       );
     }
-    // React Hook useEffect has missing dependencies: 'dispatch' and 'isTemplateSelected'. Either include them or remove the dependency array - react-hooks/exhaustive-deps
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [templateUuid, reposInTemplate]);
 
@@ -644,7 +636,6 @@ const Repositories = () => {
   ) {
     return <Error />;
   }
-  // Unnecessary conditional, value is always falsy - disable-autofix/@typescript-eslint/no-unnecessary-condition
   if (
     isLoading ||
     isTemplateLoading ||
@@ -852,7 +843,6 @@ const Repositories = () => {
                         ) : (
                           <>
                             <Td dataLabel={'Snapshot date'}>
-                              {/* Unnecessary conditional, value is always truthy - disable-autofix/@typescript-eslint/no-unnecessary-condition */}
                               {/* eslint-disable-next-line disable-autofix/@typescript-eslint/no-unnecessary-condition */}
                               {!isSnapshotsLoading ? (
                                 timestampToDisplayStringDetailed(
@@ -864,10 +854,8 @@ const Repositories = () => {
                               )}
                             </Td>
                             <Td dataLabel={'Packages'}>
-                              {/* Unnecessary conditional, value is always truthy - disable-autofix/@typescript-eslint/no-unnecessary-condition */}
                               {/* eslint-disable-next-line disable-autofix/@typescript-eslint/no-unnecessary-condition */}
                               {!isSnapshotsLoading ? (
-                                // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
                                 packages && snapshot.match?.uuid ? (
                                   <Button
                                     component='a'

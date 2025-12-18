@@ -122,7 +122,6 @@ const ComposeRow = ({ compose }: ComposeRowPropTypes) => {
       ).region;
 
   return isSuccess ? (
-    // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
     <Row
       ami={<Ami status={data.image_status.upload_status} />}
       region={<ComposeRegion region={region} />}

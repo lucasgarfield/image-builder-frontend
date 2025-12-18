@@ -59,7 +59,6 @@ const PackageRecommendations = () => {
       offset: 0,
     });
 
-  // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
   if (isSuccessDistroRepositories && distroRepositories.data) {
     distroRepoUrls = distroRepositories.data.map((repo) => repo.url || '');
   }
@@ -87,11 +86,8 @@ const PackageRecommendations = () => {
           },
         });
 
-        // Unnecessary conditional, value is always truthy - disable-autofix/@typescript-eslint/no-unnecessary-condition
-
         if (
           response.data &&
-          // Unnecessary conditional, value is always truthy - disable-autofix/@typescript-eslint/no-unnecessary-condition
           // eslint-disable-next-line disable-autofix/@typescript-eslint/no-unnecessary-condition
           response.data.packages &&
           response.data.packages.length > 0
@@ -110,28 +106,23 @@ const PackageRecommendations = () => {
         }
       })();
     }
-    // React Hook useEffect has missing dependencies: 'analytics', 'distribution', and 'isBeta'. Either include them or remove the dependency array - react-hooks/exhaustive-deps
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchRecommendedPackages, packages, isExpanded]);
 
   useEffect(() => {
-    // Unnecessary conditional, value is always truthy - disable-autofix/@typescript-eslint/no-unnecessary-condition
     // eslint-disable-next-line disable-autofix/@typescript-eslint/no-unnecessary-condition
     if (isSuccess && data.packages && data.packages.length > 0) {
       fetchRecommendationDescriptions({
         apiContentUnitSearchRequest: {
-          // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
           exact_names: data.packages,
           urls: distroRepoUrls,
         },
       });
     }
-    // React Hook useEffect has a missing dependency: 'distroRepoUrls'. Either include it or remove the dependency array - react-hooks/exhaustive-deps
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchRecommendationDescriptions, isSuccess, data?.packages]);
 
   const addAllPackages = () => {
-    // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
     // eslint-disable-next-line disable-autofix/@typescript-eslint/no-unnecessary-condition
     if (data.packages?.length) {
       data.packages.forEach((pkg) =>
@@ -157,7 +148,6 @@ const PackageRecommendations = () => {
   };
 
   const isRecommendedPackageSelected = (recPkg: string) => {
-    // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
     const foundInPackages = packages.some((pkg) => recPkg === pkg.name);
     return foundInPackages;
   };
@@ -220,15 +210,10 @@ const PackageRecommendations = () => {
                 again by changing your selected packages.
               </Alert>
             )}
-            {/* Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition */}
-            {/* Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition */}
             {/* eslint-disable-next-line disable-autofix/@typescript-eslint/no-unnecessary-condition */}
             {isSuccess && !data.packages?.length && packages.length > 0 && (
               <>No recommendations found for the set of selected packages</>
             )}
-            {/* Unnecessary conditional, value is always truthy - disable-autofix/@typescript-eslint/no-unnecessary-condition */}
-            {/* Unnecessary conditional, value is always truthy - disable-autofix/@typescript-eslint/no-unnecessary-condition */}
-            {/* Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition */}
             {/* eslint-disable-next-line disable-autofix/@typescript-eslint/no-unnecessary-condition */}
             {isSuccess && data.packages && (
               <>

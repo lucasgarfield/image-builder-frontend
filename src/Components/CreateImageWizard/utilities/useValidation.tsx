@@ -214,7 +214,6 @@ export function useRegistrationValidation(): StepValidation {
 
     if (registrationCommand) {
       try {
-        // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
         const match = registrationCommand.match(
           /Bearer\s+([\w-]+\.[\w-]+\.[\w-]+)/,
         );
@@ -935,7 +934,6 @@ export function useDetailsValidation(): StepValidation {
           trigger({ name })
             .unwrap()
             .then((response: BlueprintsResponse) => {
-              // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
               if (
                 response.meta.count > 0 &&
                 response.data[0].id !== blueprintId

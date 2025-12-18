@@ -122,7 +122,6 @@ const ActivationKeysList = ({ onErrorChange }: RegistrationProps) => {
   }, [filterValue, activationKeys?.body]);
 
   useEffect(() => {
-    // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
     const isActivationKeysEmpty =
       isSuccessActivationKeys &&
       !isLoadingActivationKey &&
@@ -157,22 +156,15 @@ const ActivationKeysList = ({ onErrorChange }: RegistrationProps) => {
     }
 
     if (!activationKey && isSuccessActivationKeys) {
-      // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
       if (
         recentActivationKey &&
         activationKeys.body?.find((key) => key.name === recentActivationKey)
       ) {
         dispatch(changeActivationKey(recentActivationKey));
-      } else if (
-        // Unnecessary conditional, value is always truthy - disable-autofix/@typescript-eslint/no-unnecessary-condition
-        activationKeys.body &&
-        activationKeys.body.length > 0
-      ) {
-        // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
+      } else if (activationKeys.body && activationKeys.body.length > 0) {
         dispatch(changeActivationKey(activationKeys.body[0].name));
       }
     }
-    // React Hook useEffect has missing dependencies: 'activationKey', 'activationKeys', 'addNotification', 'createActivationKey', 'defaultActivationKeyName', 'dispatch', 'isLoadingActivationKey', and 'recentActivationKey'. Either include them or remove the dependency array - react-hooks/exhaustive-deps
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isSuccessActivationKeys]);
 

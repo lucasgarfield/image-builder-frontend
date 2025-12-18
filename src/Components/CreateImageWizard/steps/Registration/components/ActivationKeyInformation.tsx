@@ -50,7 +50,6 @@ const ActivationKeyInformation = (): JSX.Element => {
               {activationKey}
             </DescriptionListDescription>
           </DescriptionListGroup>
-          {/* Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition */}
           {activationKeyInfo.body?.description && (
             <DescriptionListGroup>
               <DescriptionListTerm>Description</DescriptionListTerm>
@@ -61,28 +60,24 @@ const ActivationKeyInformation = (): JSX.Element => {
           )}
           <DescriptionListGroup>
             <DescriptionListTerm>Role</DescriptionListTerm>
-            {/* Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition */}
             <DescriptionListDescription>
               {activationKeyInfo.body?.role || 'Not defined'}
             </DescriptionListDescription>
           </DescriptionListGroup>
           <DescriptionListGroup>
             <DescriptionListTerm>SLA</DescriptionListTerm>
-            {/* Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition */}
             <DescriptionListDescription>
               {activationKeyInfo.body?.serviceLevel || 'Not defined'}
             </DescriptionListDescription>
           </DescriptionListGroup>
           <DescriptionListGroup>
             <DescriptionListTerm>Usage</DescriptionListTerm>
-            {/* Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition */}
             <DescriptionListDescription>
               {activationKeyInfo.body?.usage || 'Not defined'}
             </DescriptionListDescription>
           </DescriptionListGroup>
           <DescriptionListGroup>
             <DescriptionListTerm>Additional repositories</DescriptionListTerm>
-            {/* Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition */}
             <DescriptionListDescription>
               {activationKeyInfo.body?.additionalRepositories &&
               activationKeyInfo.body.additionalRepositories.length > 0 ? (

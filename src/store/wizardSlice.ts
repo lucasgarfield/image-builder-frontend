@@ -397,7 +397,6 @@ export const selectOrgId = (state: RootState) => {
 };
 
 export const selectSatelliteRegistrationCommand = (state: RootState) => {
-  // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
   return state.wizard.registration.satelliteRegistration.command;
 };
 
@@ -410,22 +409,18 @@ export const selectAapRegistration = (state: RootState) => {
 };
 
 export const selectAapCallbackUrl = (state: RootState) => {
-  // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
   return state.wizard.aapRegistration.callbackUrl;
 };
 
 export const selectAapHostConfigKey = (state: RootState) => {
-  // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
   return state.wizard.aapRegistration.hostConfigKey;
 };
 
 export const selectAapTlsCertificateAuthority = (state: RootState) => {
-  // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
   return state.wizard.aapRegistration.tlsCertificateAuthority;
 };
 
 export const selectAapTlsConfirmation = (state: RootState) => {
-  // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
   return state.wizard.aapRegistration.skipTlsVerification;
 };
 
@@ -550,7 +545,6 @@ export const selectBlueprintDescription = (state: RootState) => {
 };
 
 export const selectFirstBootScript = (state: RootState) => {
-  // Unnecessary optional chain on a non-nullish value - disable-autofix/@typescript-eslint/no-unnecessary-condition
   return state.wizard.firstBoot.script;
 };
 
