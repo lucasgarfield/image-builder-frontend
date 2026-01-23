@@ -11,6 +11,7 @@ import {
 import { Table, Tbody, Td, Th, Thead, Tr } from '@patternfly/react-table';
 
 import TemplatesEmpty from './TemplatesEmpty';
+import TemplatesError from './TemplatesError';
 
 import { PAGINATION_COUNT } from '../../../../../constants';
 import { useListTemplatesQuery } from '../../../../../store/contentSourcesApi';
@@ -23,7 +24,6 @@ import {
   selectTemplate,
 } from '../../../../../store/wizardSlice';
 import { releaseToVersion } from '../../../../../Utilities/releaseToVersion';
-import { Error } from '../../Repositories/components/Error';
 import { Loading } from '../../Repositories/components/Loading';
 
 const Templates = () => {
@@ -41,6 +41,7 @@ const Templates = () => {
       meta: { count: templateCount } = { count: 0 },
     } = {},
     isError,
+    error,
     isFetching,
     isLoading,
     refetch: refetchTemplates,
@@ -82,7 +83,7 @@ const Templates = () => {
     refetchTemplates();
   };
 
-  if (isError) return <Error />;
+  if (isError) return <TemplatesError error={error} />;
   if (isLoading) return <Loading />;
   return (
     <Grid>

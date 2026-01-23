@@ -36,14 +36,6 @@ const selectGuestImage = async () => {
   await waitFor(() => user.click(guestImageCheckBox));
 };
 
-const selectImageInstaller = async () => {
-  const user = userEvent.setup();
-  const imageInstallerCheckbox = await screen.findByRole('checkbox', {
-    name: /Bare metal installer/i,
-  });
-  await waitFor(() => user.click(imageInstallerCheckbox));
-};
-
 const goToFileSystemConfigurationStep = async () => {
   await clickNext(); // Registration
   await clickRegisterLater();
@@ -177,25 +169,6 @@ describe('Step File system configuration', () => {
     await waitFor(() => expect(mountPointAlerts[0]).not.toBeInTheDocument());
     await waitFor(() => expect(mountPointAlerts[1]).not.toBeInTheDocument());
     expect(await getNextButton()).toBeEnabled();
-  });
-
-  test('manual partitioning is hidden for ISO targets only', async () => {
-    await renderCreateMode();
-    await selectImageInstaller();
-    await goToFileSystemConfigurationStep();
-    expect(
-      screen.queryByText(/Basic filesystem partitioning/i),
-    ).not.toBeInTheDocument();
-  });
-
-  test('manual partitioning is shown for ISO target and other target', async () => {
-    await renderCreateMode();
-    await selectImageInstaller();
-    await selectGuestImage();
-    await goToFileSystemConfigurationStep();
-    await clickManuallyConfigurePartitions();
-
-    await screen.findByText('Configure partitions');
   });
 
   test('revisit step button on Review works', async () => {

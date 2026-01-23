@@ -38,7 +38,6 @@ import Azure from './steps/TargetEnvironment/Azure';
 import Gcp from './steps/TargetEnvironment/Gcp';
 import TimezoneStep from './steps/Timezone';
 import UsersStep from './steps/Users';
-import { useHasSpecificTargetOnly } from './utilities/hasSpecificTargetOnly';
 import {
   useAAPValidation,
   useAzureValidation,
@@ -295,8 +294,6 @@ const CreateImageWizard = ({ isEdit }: CreateImageWizardProps) => {
       setUsersStepAttemptedNext(false);
     }
   }, [usersValidation.disabledNext, usersStepAttemptedNext]);
-
-  const hasWslTargetOnly = useHasSpecificTargetOnly('wsl');
 
   let startIndex = 1; // default index
   const JUMP_TO_REVIEW_STEP = 24;
@@ -567,7 +564,6 @@ const CreateImageWizard = ({ isEdit }: CreateImageWizardProps) => {
                 id='step-file-system'
                 key='step-file-system'
                 navItem={CustomStatusNavItem}
-                isHidden={hasWslTargetOnly}
                 status={
                   !filesystemPristine && fileSystemValidation.disabledNext
                     ? 'error'
@@ -727,7 +723,7 @@ const CreateImageWizard = ({ isEdit }: CreateImageWizardProps) => {
                 id='wizard-kernel'
                 key='wizard-kernel'
                 navItem={CustomStatusNavItem}
-                isHidden={hasWslTargetOnly || isImageMode}
+                isHidden={isImageMode}
                 status={kernelValidation.disabledNext ? 'error' : 'default'}
                 footer={
                   <CustomWizardFooter

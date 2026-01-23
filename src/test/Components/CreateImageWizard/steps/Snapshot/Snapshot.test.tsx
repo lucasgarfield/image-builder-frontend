@@ -1,7 +1,12 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
+import { http, HttpResponse } from 'msw';
 
-import { CREATE_BLUEPRINT, EDIT_BLUEPRINT } from '../../../../../constants';
+import {
+  CONTENT_SOURCES_API,
+  CREATE_BLUEPRINT,
+  EDIT_BLUEPRINT,
+} from '../../../../../constants';
 import { CreateBlueprintRequest } from '../../../../../store/imageBuilderApi';
 import { yyyyMMddFormat } from '../../../../../Utilities/time';
 import { mockBlueprintIds } from '../../../../fixtures/blueprints';
@@ -10,6 +15,7 @@ import {
   expectedPayloadRepositories,
   snapshotCreateBlueprintRequest,
 } from '../../../../fixtures/editMode';
+import { server } from '../../../../mocks/server';
 import {
   blueprintRequest,
   clickNext,
@@ -330,5 +336,45 @@ describe('Snapshot edit mode', () => {
     );
     const expectedRequest = snapshotCreateBlueprintRequest;
     expect(receivedRequest).toEqual(expectedRequest);
+  });
+});
+
+describe('Content templates error handling', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  test('displays access denied message for 401 error', async () => {
+    server.use(
+      http.get(`${CONTENT_SOURCES_API}/templates/`, () => {
+        return new HttpResponse(null, { status: 401 });
+      })
+    );
+
+    await renderCreateMode();
+    await goToSnapshotStep();
+    await selectUseTemplate();
+
+    await screen.findByText(/You do not have access/i);
+    await screen.findByText(
+      /Contact your organization administrator\(s\) for more information/i
+    );
+  });
+
+  test('displays unavailable message for other errors', async () => {
+    server.use(
+      http.get(`${CONTENT_SOURCES_API}/templates/`, () => {
+        return new HttpResponse(null, { status: 500 });
+      })
+    );
+
+    await renderCreateMode();
+    await goToSnapshotStep();
+    await selectUseTemplate();
+
+    await screen.findByText(/Content templates unavailable/i);
+    await screen.findByText(
+      /Content templates cannot be reached, try again later/i
+    );
   });
 });

@@ -32,7 +32,6 @@ import {
   setCompliancePolicy,
   setOscapProfile,
 } from '../../../../../store/wizardSlice';
-import { useHasSpecificTargetOnly } from '../../../utilities/hasSpecificTargetOnly';
 import { removeBetaFromRelease } from '../removeBetaFromRelease';
 
 type ComplianceSelectOptionPropType = {
@@ -73,7 +72,6 @@ const PolicySelector = ({ isDisabled = false }: PolicySelectorProps) => {
     asDistribution(useAppSelector(selectDistribution)),
   );
   const majorVersion = release.split('-')[1];
-  const hasWslTargetOnly = useHasSpecificTargetOnly('wsl');
   const dispatch = useAppDispatch();
   const [isOpen, setIsOpen] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
@@ -232,7 +230,7 @@ const PolicySelector = ({ isDisabled = false }: PolicySelectorProps) => {
       onClick={() => setIsOpen(!isOpen)}
       isExpanded={isOpen}
       isDisabled={
-        isDisabled || isFetchingPolicies || hasWslTargetOnly || isApplying
+        isDisabled || isFetchingPolicies || isApplying
       }
       isFullWidth
       style={{ maxWidth: 'none' }}

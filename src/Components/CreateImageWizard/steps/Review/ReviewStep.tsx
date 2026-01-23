@@ -61,7 +61,6 @@ import {
   selectTimezone,
   selectUsers,
 } from '../../../../store/wizardSlice';
-import { useHasSpecificTargetOnly } from '../../utilities/hasSpecificTargetOnly';
 import SecurityInformation from '../Oscap/components/SecurityInformation';
 
 const Review = () => {
@@ -135,8 +134,6 @@ const Review = () => {
     setIsExpandedFirstBoot(isExpandableFirstBoot);
   const onToggleUsers = (isExpandedUsers: boolean) =>
     setIsExpandedUsers(isExpandedUsers);
-
-  const hasWslTargetOnly = useHasSpecificTargetOnly('wsl');
 
   type RevisitStepButtonProps = {
     ariaLabel: string;
@@ -341,21 +338,19 @@ const Review = () => {
           <SecurityInformation />
         </ExpandableSection>
       )}
-      {!hasWslTargetOnly && (
-        <ExpandableSection
-          toggleContent={composeExpandable(
-            'File system configuration',
-            'revisit-file-system',
-            'step-file-system',
-          )}
-          onToggle={(_event, isExpandedFSC) => onToggleFSC(isExpandedFSC)}
-          isExpanded={isExpandedFSC}
-          isIndented
-          data-testid='file-system-configuration-expandable'
-        >
-          <FSCList />
-        </ExpandableSection>
-      )}
+      <ExpandableSection
+        toggleContent={composeExpandable(
+          'File system configuration',
+          'revisit-file-system',
+          'step-file-system',
+        )}
+        onToggle={(_event, isExpandedFSC) => onToggleFSC(isExpandedFSC)}
+        isExpanded={isExpandedFSC}
+        isIndented
+        data-testid='file-system-configuration-expandable'
+      >
+        <FSCList />
+      </ExpandableSection>
       {isPackageMode && (
         <ExpandableSection
           toggleContent={composeExpandable(
