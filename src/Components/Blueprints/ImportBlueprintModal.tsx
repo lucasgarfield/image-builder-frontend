@@ -23,20 +23,21 @@ import { useAddNotification } from '@redhat-cloud-services/frontend-components-n
 import { useNavigate } from 'react-router-dom';
 import TOML from 'smol-toml';
 
-import { mapOnPremToHosted } from './helpers/onPremToHostedBlueprintMapper';
-
-import {
-  ApiRepositoryImportResponseRead,
-  ApiRepositoryRequest,
-  useBulkImportRepositoriesMutation,
-} from '../../store/contentSourcesApi';
-import { selectIsOnPremise, selectPathResolver } from '../../store/envSlice';
-import { useAppSelector } from '../../store/hooks';
 import {
   BlueprintExportResponse,
   BlueprintItem,
   CustomRepository,
-} from '../../store/imageBuilderApi';
+} from '@/store/api/backend';
+import {
+  ApiRepositoryImportResponseRead,
+  ApiRepositoryRequest,
+  useBulkImportRepositoriesMutation,
+} from '@/store/api/contentSources';
+
+import { mapOnPremToHosted } from './helpers/onPremToHostedBlueprintMapper';
+
+import { selectIsOnPremise, selectPathResolver } from '../../store/envSlice';
+import { useAppSelector } from '../../store/hooks';
 import { wizardState } from '../../store/wizardSlice';
 import { getErrorMessage } from '../../Utilities/getErrorMessage';
 import {

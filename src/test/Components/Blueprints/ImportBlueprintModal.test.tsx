@@ -12,7 +12,7 @@ import {
   ONPREM_BLUEPRINT_TOML,
   ONPREM_BLUEPRINT_TOML_WITH_INVALID_VALUES,
 } from '../../fixtures/importBlueprints';
-import { renderCustomRoutesWithReduxRouter } from '../../testUtils';
+import { renderCustomRoutesWithReduxRouter } from '../../renderUtils';
 import { clickNext, goToStep } from '../CreateImageWizard/wizardTestUtils';
 
 const setUp = async () => {
@@ -172,7 +172,7 @@ describe('Import modal', () => {
 
     // File system configuration
     await clickNext();
-    const partition = await screen.findByText('/var');
+    const partition = await screen.findByDisplayValue('/var');
     expect(partition).toBeInTheDocument();
     const sizeValue = screen.getByRole('cell', {
       name: /2/i,
@@ -223,7 +223,7 @@ describe('Import modal', () => {
     // Kernel
     await clickNext();
     const kernelNameInput = await screen.findByPlaceholderText(
-      /Select kernel package/i,
+      /Select default kernel/i,
     );
     expect(kernelNameInput).toHaveValue('kernel-debug');
     await screen.findByText('nosmt=force');
@@ -348,7 +348,10 @@ describe('Import modal', () => {
       await screen.findByText(/Invalid kernel arguments/),
     ).toBeInTheDocument();
     await waitFor(() =>
-      user.click(screen.getAllByRole('button', { name: /clear input/i })[0]),
+      user.click(screen.getByRole('button', { name: /Menu toggle/i })),
+    );
+    await waitFor(() =>
+      user.click(screen.getByRole('option', { name: 'None' })),
     );
     await waitFor(() =>
       user.click(
@@ -470,7 +473,7 @@ describe('Partitioning import', () => {
         name: /Basic filesystem partitioning/i,
       }),
     ).toBeChecked();
-    await screen.findByText('/var');
+    await screen.findByDisplayValue('/var');
   });
 
   test('blueprint import with disk works', async () => {

@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 
 import {
-  Alert,
   Button,
   FormGroup,
   MenuToggle,
@@ -16,21 +15,20 @@ import {
 } from '@patternfly/react-core';
 import { TimesIcon } from '@patternfly/react-icons';
 
-import { useSelectorHandlers } from './useSelectorHandlers';
-
-import {
-  useBackendPrefetch,
-  useGetOscapCustomizationsQuery,
-  useGetOscapProfilesQuery,
-  useLazyGetOscapCustomizationsQuery,
-} from '../../../../../store/backendApi';
-import { selectIsOnPremise } from '../../../../../store/envSlice';
-import { useAppDispatch, useAppSelector } from '../../../../../store/hooks';
 import {
   DistributionProfileItem,
+  DistributionProfileResponse,
   OpenScap,
   OpenScapProfile,
-} from '../../../../../store/imageBuilderApi';
+  useBackendPrefetch,
+  useGetOscapCustomizationsQuery,
+  useLazyGetOscapCustomizationsQuery,
+} from '@/store/api/backend';
+
+import { useSelectorHandlers } from './useSelectorHandlers';
+
+import { selectIsOnPremise } from '../../../../../store/envSlice';
+import { useAppDispatch, useAppSelector } from '../../../../../store/hooks';
 import { asDistribution } from '../../../../../store/typeGuards';
 import {
   changeFips,
@@ -50,9 +48,19 @@ type OScapSelectOptionValueType = {
 
 type ProfileSelectorProps = {
   isDisabled?: boolean;
+  profiles: DistributionProfileResponse | undefined;
+  isFetching: boolean;
+  isSuccess: boolean;
+  refetch: () => void;
 };
 
-const ProfileSelector = ({ isDisabled = false }: ProfileSelectorProps) => {
+const ProfileSelector = ({
+  isDisabled = false,
+  profiles,
+  isFetching,
+  isSuccess,
+  refetch,
+}: ProfileSelectorProps) => {
   const isOnPremise = useAppSelector(selectIsOnPremise);
   const profileID = useAppSelector(selectComplianceProfileID);
   const release = removeBetaFromRelease(
@@ -83,16 +91,6 @@ const ProfileSelector = ({ isDisabled = false }: ProfileSelectorProps) => {
     handlePartitions,
     handleServices,
   } = useSelectorHandlers();
-
-  const {
-    data: profiles,
-    isFetching,
-    isSuccess,
-    isError,
-    refetch,
-  } = useGetOscapProfilesQuery({
-    distribution: release,
-  });
 
   const { data: currentProfileData } = useGetOscapCustomizationsQuery(
     {
@@ -361,16 +359,6 @@ const ProfileSelector = ({ isDisabled = false }: ProfileSelectorProps) => {
           )}
         </SelectList>
       </Select>
-      {isError && (
-        <Alert
-          title='Error fetching the profiles'
-          variant='danger'
-          isPlain
-          isInline
-        >
-          Cannot get the list of profiles
-        </Alert>
-      )}
     </FormGroup>
   );
 };

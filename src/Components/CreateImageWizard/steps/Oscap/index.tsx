@@ -20,6 +20,14 @@ import {
 import { InfoCircleIcon } from '@patternfly/react-icons';
 import useChrome from '@redhat-cloud-services/frontend-components/useChrome';
 
+import {
+  useBackendPrefetch,
+  useGetOscapCustomizationsQuery,
+  useGetOscapProfilesQuery,
+} from '@/store/api/backend';
+import { usePoliciesQuery } from '@/store/api/compliance';
+import { useCustomizationRestrictions } from '@/store/api/distributions';
+
 import OscapOnPremSpinner from './components/OnPremSpinner';
 import OscapOnPremWarning from './components/OnPremWarning';
 import PolicyDetails from './components/PolicyDetails';
@@ -35,12 +43,6 @@ import {
   OSCAP_URL,
 } from '../../../../constants';
 import { useGetUser } from '../../../../Hooks';
-import {
-  useBackendPrefetch,
-  useGetOscapCustomizationsQuery,
-} from '../../../../store/backendApi';
-import { usePoliciesQuery } from '../../../../store/complianceApi';
-import { useCustomizationRestrictions } from '../../../../store/distributions';
 import { selectIsOnPremise } from '../../../../store/envSlice';
 import { useAppDispatch, useAppSelector } from '../../../../store/hooks';
 import { asDistribution } from '../../../../store/typeGuards';
@@ -87,6 +89,19 @@ const OscapContent = () => {
   const { restrictions } = useCustomizationRestrictions({
     selectedImageTypes: imageTypes,
   });
+
+  const {
+    data: profiles,
+    isFetching,
+    isSuccess,
+    isError,
+    refetch,
+  } = useGetOscapProfilesQuery(
+    {
+      distribution: release,
+    },
+    { skip: complianceType !== 'openscap' || restrictions.openscap.shouldHide },
+  );
 
   const { data: currentProfileData } = useGetOscapCustomizationsQuery(
     {
@@ -280,6 +295,10 @@ const OscapContent = () => {
                   <FlexItem className='pf-v6-u-w-50'>
                     <ProfileSelector
                       isDisabled={complianceType !== 'openscap'}
+                      profiles={profiles}
+                      isFetching={isFetching}
+                      isSuccess={isSuccess}
+                      refetch={refetch}
                     />
                   </FlexItem>
                   <FlexItem>
@@ -352,6 +371,12 @@ const OscapContent = () => {
               </AlertActionLink>
             </Alert>
           )}
+
+        {isError && (
+          <Alert title='Error fetching the profiles' variant='danger' isInline>
+            Cannot get the list of profiles
+          </Alert>
+        )}
       </Form>
     </>
   );

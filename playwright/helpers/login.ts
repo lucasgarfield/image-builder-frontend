@@ -123,15 +123,26 @@ const loginCockpit = async (page: Page, user: string, password: string) => {
   ).toBeVisible();
 };
 
-const loginConsole = async (page: Page, user: string, password: string) => {
-  await closePopupsIfExist(page);
-  await page.goto('/insights/image-builder/landing');
+const fillAndSubmitLogin = async (
+  page: Page,
+  user: string,
+  password: string,
+) => {
   await page.getByRole('textbox', { name: 'Red Hat login' }).fill(user);
   await page.getByRole('button', { name: 'Next' }).click();
   await page.getByRole('textbox', { name: 'Password' }).fill(password);
   await page.getByRole('button', { name: 'Log in' }).click();
+};
+
+const loginConsole = async (page: Page, user: string, password: string) => {
+  await closePopupsIfExist(page);
+  await page.goto('/insights/image-builder/landing');
+  await fillAndSubmitLogin(page, user, password);
+
+  const allImagesHeading = page.getByRole('heading', { name: 'All images' });
+  await expect(allImagesHeading).toBeVisible({ timeout: 30000 });
   await togglePreview(page);
-  await expect(page.getByRole('heading', { name: 'All images' })).toBeVisible();
+  await expect(allImagesHeading).toBeVisible();
 };
 
 export const storeStorageStateAndToken = async (page: Page) => {

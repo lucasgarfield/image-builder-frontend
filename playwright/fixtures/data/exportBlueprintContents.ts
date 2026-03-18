@@ -109,8 +109,16 @@ export const exportedLocaleBP = (blueprintName: string): string => {
 timezone = "Etc/UTC"
 
 [customizations.locale]
-languages = [ "C.UTF-8", "fy_DE.UTF-8", "aa_DJ.UTF-8", "aa_ER.UTF-8" ]
-keyboard = "ANSI-dvorak"`;
+languages = [ "C.UTF-8", "ru_RU.UTF-8", "en_US.UTF-8", "fy_DE.UTF-8", "en_GB.UTF-8" ]
+keyboard = "ANSI-dvorak"
+
+[[packages]]
+name = "langpacks-en"
+version = "*"
+
+[[packages]]
+name = "langpacks-ru"
+version = "*"`;
 };
 
 export const exportedSystemdBP = (blueprintName: string): string => {
@@ -134,6 +142,34 @@ export const exportedTimezoneBP = (blueprintName: string): string => {
 [customizations.timezone]
 timezone = "Europe/Oslo"
 ntpservers = [ "0.nl.pool.ntp.org", "0.de.pool.ntp.org" ]
+
+[customizations.locale]
+languages = [ "C.UTF-8" ]`;
+};
+
+export const exportedGroupsBP = (blueprintName: string): string => {
+  return `name = "${blueprintName}"
+
+[[customizations.user]]
+name = "testuser"
+key = ""
+groups = [ "developers" ]
+password = ""
+
+[[customizations.group]]
+name = "developers"
+gid = 1000
+
+[[customizations.group]]
+name = "qa-team"
+gid = 1001
+
+[[customizations.group]]
+name = "ops"
+gid = 1002
+
+[customizations.timezone]
+timezone = "Etc/UTC"
 
 [customizations.locale]
 languages = [ "C.UTF-8" ]`;

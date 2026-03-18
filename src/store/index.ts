@@ -1,16 +1,18 @@
 import { combineReducers, configureStore } from '@reduxjs/toolkit';
 import promiseMiddleware from 'redux-promise-middleware';
 
+import {
+  complianceApi,
+  contentSourcesApi,
+  provisioningApi,
+  rhsmApi,
+} from './api';
+import { imageBuilderApi } from './api/backend/hosted/enhancedImageBuilderApi';
 import { blueprintsSlice } from './BlueprintSlice';
 import { cloudProviderConfigSlice } from './cloudProviderConfigSlice';
 import { cockpitApi } from './cockpit/cockpitApi';
-import { complianceApi } from './complianceApi';
-import { contentSourcesApi } from './contentSourcesApi';
 import { envSlice, selectIsOnPremise } from './envSlice';
 import { listenerMiddleware, startAppListening } from './listenerMiddleware';
-import { provisioningApi } from './provisioningApi';
-import { rhsmApi } from './rhsmApi';
-import { imageBuilderApi } from './service/enhancedImageBuilderApi';
 import { asDistribution } from './typeGuards';
 import wizardSlice, {
   changeArchitecture,

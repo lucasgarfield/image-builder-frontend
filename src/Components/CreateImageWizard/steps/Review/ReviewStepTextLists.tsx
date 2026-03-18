@@ -19,6 +19,13 @@ import {
 import { Table, Tbody, Td, Th, Thead, Tr } from '@patternfly/react-table';
 
 import {
+  useGetTemplateQuery,
+  useListSnapshotsByDateMutation,
+} from '@/store/api/contentSources';
+import { useGetSourceListQuery } from '@/store/api/provisioning';
+import { useShowActivationKeyQuery } from '@/store/api/rhsm';
+
+import {
   DiskReviewTable,
   FSReviewTable,
   PackagesTable,
@@ -40,14 +47,8 @@ import {
   targetOptions,
   UNIT_GIB,
 } from '../../../../constants';
-import {
-  useGetTemplateQuery,
-  useListSnapshotsByDateMutation,
-} from '../../../../store/contentSourcesApi';
 import { selectIsOnPremise } from '../../../../store/envSlice';
 import { useAppSelector } from '../../../../store/hooks';
-import { useGetSourceListQuery } from '../../../../store/provisioningApi';
-import { useShowActivationKeyQuery } from '../../../../store/rhsmApi';
 import {
   selectAapCallbackUrl,
   selectAapHostConfigKey,

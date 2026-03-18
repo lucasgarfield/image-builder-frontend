@@ -14,6 +14,8 @@ import {
 import { ArrowRightIcon } from '@patternfly/react-icons';
 
 import './ReviewStep.scss';
+import { useCustomizationRestrictions } from '@/store/api/distributions';
+
 import {
   ContentList,
   DetailsList,
@@ -41,7 +43,6 @@ import {
 
 import isRhel from '../../../../../src/Utilities/isRhel';
 import { targetOptions } from '../../../../constants';
-import { useCustomizationRestrictions } from '../../../../store/distributions';
 import { useAppSelector } from '../../../../store/hooks';
 import {
   selectAapRegistration,
@@ -63,7 +64,6 @@ import {
   selectUsers,
   UserGroup,
 } from '../../../../store/wizardSlice';
-import { useFlag } from '../../../../Utilities/useGetEnvironment';
 import SecurityInformation from '../Oscap/components/SecurityInformation';
 
 const Review = () => {
@@ -86,9 +86,6 @@ const Review = () => {
   const users = useAppSelector(selectUsers);
   const userGroups = useAppSelector(selectUserGroups);
   const kernel = useAppSelector(selectKernel);
-
-  const isNetworkInstallerEnabled = useFlag('image-builder.net-installer');
-  const isPXEEnabled = useFlag('image-builder.pxe-tar-xz.enabled');
 
   const [isExpandedAap, setIsExpandedAap] = useState(true);
   const [isExpandedImageOutput, setIsExpandedImageOutput] = useState(true);
@@ -298,18 +295,17 @@ const Review = () => {
               </Content>
             </StackItem>
           )}
-          {environments.includes('network-installer') &&
-            isNetworkInstallerEnabled && (
-              <StackItem>
-                <Content>
-                  <Content component={ContentVariants.h3}>
-                    {targetOptions['network-installer']} (.iso)
-                  </Content>
-                  <TargetEnvOtherList />
+          {environments.includes('network-installer') && (
+            <StackItem>
+              <Content>
+                <Content component={ContentVariants.h3}>
+                  {targetOptions['network-installer']} (.iso)
                 </Content>
-              </StackItem>
-            )}
-          {isPXEEnabled && environments.includes('pxe-tar-xz') && (
+                <TargetEnvOtherList />
+              </Content>
+            </StackItem>
+          )}
+          {environments.includes('pxe-tar-xz') && (
             <StackItem>
               <Content>
                 <Content component={ContentVariants.h3}>

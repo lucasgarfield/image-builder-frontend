@@ -3,15 +3,24 @@ import React, { useEffect, useState } from 'react';
 import { CheckCircleIcon } from '@patternfly/react-icons';
 import { jwtDecode } from 'jwt-decode';
 
+import {
+  BlueprintsResponse,
+  useLazyGetBlueprintsQuery,
+} from '@/store/api/backend';
+import { useShowActivationKeyQuery } from '@/store/api/rhsm';
+
 import { getListOfDuplicates } from './getListOfDuplicates';
 
-import { UNIQUE_VALIDATION_DELAY } from '../../../constants';
-import { useLazyGetBlueprintsQuery } from '../../../store/backendApi';
+import {
+  SYSTEM_GROUPS,
+  UNDEFINED_GROUPS_WARNING_KEY,
+  UNIQUE_VALIDATION_DELAY,
+} from '../../../constants';
 import { selectIsOnPremise } from '../../../store/envSlice';
 import { useAppSelector } from '../../../store/hooks';
-import { BlueprintsResponse } from '../../../store/imageBuilderApi';
-import { useShowActivationKeyQuery } from '../../../store/rhsmApi';
 import {
+  MAX_REGULAR_GID,
+  MIN_REGULAR_GID,
   selectAapCallbackUrl,
   selectAapHostConfigKey,
   selectAapTlsCertificateAuthority,
@@ -48,8 +57,12 @@ import {
   selectUsers,
   UserWithAdditionalInfo,
 } from '../../../store/wizardSlice';
-import { keyboardsList } from '../steps/Locale/keyboardsList';
-import { languagesList } from '../steps/Locale/languagesList';
+import {
+  DiskPartition,
+  FilesystemPartition,
+} from '../steps/FileSystem/fscTypes';
+import { keyboardsList } from '../steps/Locale/data/keyboardsList';
+import { languagesList } from '../steps/Locale/data/languagesList';
 import { HelperTextVariant } from '../steps/Packages/components/CustomHelperText';
 import { timezones } from '../steps/Timezone/timezonesList';
 import {
@@ -64,7 +77,6 @@ import {
   isKernelArgumentValid,
   isKernelNameValid,
   isMountpointMinSizeValid,
-  isMountpointValid,
   isNtpServerValid,
   isPartitionNameValid,
   isPortValid,
@@ -86,6 +98,9 @@ export type StepValidation = {
 
 export type UsersStepValidation = {
   errors: {
+    [key: string]: { [key: string]: string };
+  };
+  warnings: {
     [key: string]: { [key: string]: string };
   };
   disabledNext: boolean;
@@ -315,6 +330,73 @@ export function useAAPValidation(): StepValidation {
   return { errors, disabledNext: Object.keys(errors).length > 0 };
 }
 
+const validatePartitionSize = (
+  partition: FilesystemPartition | DiskPartition,
+  errors: { [key: string]: string },
+) => {
+  if (!partition.min_size || partition.min_size === '') {
+    errors[`min-size-${partition.id}`] = 'Partition size is required';
+    return true;
+  }
+  if (partition.min_size && !isMountpointMinSizeValid(partition.min_size)) {
+    errors[`min-size-${partition.id}`] = 'Must be larger than 0';
+    return true;
+  }
+  return false;
+};
+
+const validatePartitionMountpoint = (
+  partition: FilesystemPartition | DiskPartition,
+  errors: { [key: string]: string },
+  mountpointDuplicates: string[],
+  invalidMountpoints: string[],
+) => {
+  if ('mountpoint' in partition) {
+    if (!partition.mountpoint) {
+      const isSwap = 'fs_type' in partition && partition.fs_type === 'swap';
+      if (!isSwap) {
+        errors[`mountpoint-${partition.id}`] = 'Undefined mount point';
+        return true;
+      }
+    }
+    if (partition.mountpoint) {
+      if (mountpointDuplicates.includes(partition.mountpoint)) {
+        errors[`mountpoint-${partition.id}`] = 'Duplicate mount points';
+        return true;
+      }
+      if (invalidMountpoints.includes(partition.mountpoint)) {
+        errors[`mountpoint-${partition.id}`] = 'Invalid mount point';
+        return true;
+      }
+    }
+  }
+  return false;
+};
+
+const validatePartitionName = (
+  partition: FilesystemPartition | DiskPartition,
+  errors: { [key: string]: string },
+  nameDuplicates: string[],
+) => {
+  if (
+    'name' in partition &&
+    partition.name &&
+    !isPartitionNameValid(partition.name)
+  ) {
+    errors[`name-${partition.id}`] = 'Name is invalid';
+    return true;
+  }
+  if (
+    'name' in partition &&
+    partition.name &&
+    nameDuplicates.includes(partition.name)
+  ) {
+    errors[`name-${partition.id}`] = 'Name is not unique';
+    return true;
+  }
+  return false;
+};
+
 export function useFilesystemValidation(): StepValidation {
   const fscMode = useAppSelector(selectFscMode);
   const filesystemPartitions = useAppSelector(selectFilesystemPartitions);
@@ -327,112 +409,54 @@ export function useFilesystemValidation(): StepValidation {
     return { errors, disabledNext: false };
   }
 
-  const fscMountpointDuplicates = getDuplicateMountPoints(filesystemPartitions);
-  for (const partition of filesystemPartitions) {
-    if (!partition.min_size || partition.min_size === '') {
-      errors[`min-size-${partition.id}`] = 'Partition size is required';
-      disabledNext = true;
-    }
-    if (partition.min_size && !isMountpointMinSizeValid(partition.min_size)) {
-      errors[`min-size-${partition.id}`] = 'Must be larger than 0';
-      disabledNext = true;
-    }
-    if (fscMountpointDuplicates.includes(partition.mountpoint)) {
-      errors[`mountpoint-${partition.id}`] = 'Duplicate mount points';
-      disabledNext = true;
-    }
-    if (!isMountpointValid(partition, blueprintMode)) {
-      errors[`mountpoint-subpath-${partition.id}`] = 'Invalid mountpoint';
-      disabledNext = true;
-    }
-  }
+  const partitions =
+    fscMode === 'basic' ? filesystemPartitions : diskPartitions;
+
+  const mountpointDuplicates = getDuplicateMountPoints(partitions);
+  const invalidMountpoints = getInvalidMountpoints(partitions, blueprintMode);
 
   const volumeGroups = diskPartitions.filter((p) => p.type === 'lvm');
-  const diskMountpointDuplicates = getDuplicateMountPoints(diskPartitions);
-  const diskInvalidMountpoints = getInvalidMountpoints(
-    diskPartitions,
-    blueprintMode,
-  );
-  const diskNameDuplicates = volumeGroups.flatMap((vg) =>
-    getDuplicateNames(vg),
-  );
-  for (const partition of diskPartitions) {
-    if (!partition.min_size || partition.min_size === '') {
-      errors[`min-size-${partition.id}`] = 'Partition size is required';
+  const nameDuplicates = volumeGroups.flatMap((vg) => getDuplicateNames(vg));
+
+  for (const partition of partitions) {
+    if (validatePartitionSize(partition, errors)) {
       disabledNext = true;
     }
-    if (partition.min_size && !isMountpointMinSizeValid(partition.min_size)) {
-      errors[`min-size-${partition.id}`] = 'Must be larger than 0';
+    if (
+      validatePartitionMountpoint(
+        partition,
+        errors,
+        mountpointDuplicates,
+        invalidMountpoints,
+      )
+    ) {
       disabledNext = true;
     }
-    if ('mountpoint' in partition) {
-      if (!partition.mountpoint) {
-        errors[`mountpoint-${partition.id}`] = 'Undefined mount point';
+    if (fscMode === 'advanced') {
+      if (validatePartitionName(partition, errors, nameDuplicates)) {
         disabledNext = true;
       }
-      if (partition.mountpoint) {
-        if (diskMountpointDuplicates.includes(partition.mountpoint)) {
-          errors[`mountpoint-${partition.id}`] = 'Duplicate mount points';
-          disabledNext = true;
-        }
-        if (diskInvalidMountpoints.includes(partition.mountpoint)) {
-          errors[`mountpoint-${partition.id}`] = 'Invalid mount point';
-          disabledNext = true;
-        }
-      }
-    }
-  }
-
-  for (const partition of diskPartitions) {
-    if (
-      'name' in partition &&
-      partition.name &&
-      !isPartitionNameValid(partition.name)
-    ) {
-      errors[`name-${partition.id}`] = 'Partition name is invalid';
-      disabledNext = true;
-    }
-    if (
-      'name' in partition &&
-      partition.name &&
-      diskNameDuplicates.includes(partition.name)
-    ) {
-      errors[`name-${partition.id}`] = 'Name is not unique';
-      disabledNext = true;
-    }
-
-    if (partition.type === 'lvm' && partition.logical_volumes.length > 0) {
-      for (const lv of partition.logical_volumes) {
-        if (lv.name && !isPartitionNameValid(lv.name)) {
-          errors[`name-${lv.id}`] = 'Volume name is invalid';
-          disabledNext = true;
-        }
-        if (lv.name && diskNameDuplicates.includes(lv.name)) {
-          errors[`name-${lv.id}`] = 'Name is not unique';
-          disabledNext = true;
-        }
-        if (!lv.min_size || lv.min_size === '') {
-          errors[`min-size-${lv.id}`] = 'Partition size is required';
-          disabledNext = true;
-        }
-        if (lv.min_size && !isMountpointMinSizeValid(lv.min_size)) {
-          errors[`min-size-${lv.id}`] = 'Must be larger than 0';
-          disabledNext = true;
-        }
-        if ('mountpoint' in lv) {
-          if (!lv.mountpoint && lv.fs_type !== 'swap') {
-            errors[`mountpoint-${lv.id}`] = 'Undefined mount point';
+      if (
+        'type' in partition &&
+        partition.type === 'lvm' &&
+        partition.logical_volumes.length > 0
+      ) {
+        for (const lv of partition.logical_volumes) {
+          if (validatePartitionName(lv, errors, nameDuplicates)) {
             disabledNext = true;
           }
-          if (lv.mountpoint) {
-            if (diskMountpointDuplicates.includes(lv.mountpoint)) {
-              errors[`mountpoint-${lv.id}`] = 'Duplicate mount points';
-              disabledNext = true;
-            }
-            if (diskInvalidMountpoints.includes(lv.mountpoint)) {
-              errors[`mountpoint-${lv.id}`] = 'Invalid mount point';
-              disabledNext = true;
-            }
+          if (validatePartitionSize(lv, errors)) {
+            disabledNext = true;
+          }
+          if (
+            validatePartitionMountpoint(
+              lv,
+              errors,
+              mountpointDuplicates,
+              invalidMountpoints,
+            )
+          ) {
+            disabledNext = true;
           }
         }
       }
@@ -814,15 +838,19 @@ export function useUsersValidation(): UsersStepValidation {
         // the User step is required in image mode
         // blocking Next without a render error is sufficient
         errors: {},
+        warnings: {},
         disabledNext: true,
       };
     }
 
     return {
       errors: {},
+      warnings: {},
       disabledNext: false,
     };
   }
+
+  const definedGroupNames = userGroups.map((group) => group.name);
 
   for (let index = 0; index < users.length; index++) {
     const userErrors: { [key: string]: string } = {};
@@ -872,6 +900,12 @@ export function useUsersValidation(): UsersStepValidation {
         ? users[index].name
         : '';
 
+    const undefinedGroups = users[index].groups.filter(
+      (groupName) =>
+        !definedGroupNames.includes(groupName) &&
+        !SYSTEM_GROUPS.includes(groupName) &&
+        isUserGroupValid(groupName),
+    );
     if (
       invalidGroups.length > 0 ||
       duplicateGroups.length > 0 ||
@@ -894,19 +928,32 @@ export function useUsersValidation(): UsersStepValidation {
       userErrors.groups = groupsErrors.join(' | ');
     }
 
+    if (undefinedGroups.length > 0) {
+      userErrors[UNDEFINED_GROUPS_WARNING_KEY] =
+        `User assigned to undefined group(s): ${undefinedGroups.join(', ')}. Ensure these groups exist on the system through a package or define them in the 'Groups' section above.`;
+    }
+
     if (Object.keys(userErrors).length > 0) {
       errors[index] = userErrors;
     }
   }
 
+  // Count only blocking errors (exclude warnings)
+  const hasBlockingErrors = Object.values(errors).some((userErrors) => {
+    return Object.keys(userErrors).some(
+      (key) => key !== UNDEFINED_GROUPS_WARNING_KEY,
+    );
+  });
+
   const canProceed =
     // Case 1: there is no users
     users.length === 0 ||
-    // Case 2: all users are valid
-    Object.keys(errors).length === 0;
+    // Case 2: all users are valid (no blocking errors)
+    !hasBlockingErrors;
 
   return {
     errors,
+    warnings: {},
     disabledNext: !canProceed,
   };
 }
@@ -914,9 +961,11 @@ export function useUsersValidation(): UsersStepValidation {
 export function useUserGroupsValidation(): UsersStepValidation {
   const userGroups = useAppSelector(selectUserGroups);
   const errors: { [key: string]: { [key: string]: string } } = {};
+  const warnings: { [key: string]: { [key: string]: string } } = {};
 
   for (let index = 0; index < userGroups.length; index++) {
     const groupErrors: { [key: string]: string } = {};
+    const groupWarnings: { [key: string]: string } = {};
     const group = userGroups[index];
 
     if (group.name) {
@@ -932,8 +981,23 @@ export function useUserGroupsValidation(): UsersStepValidation {
       }
     }
 
+    if (group.gid !== undefined) {
+      const duplicateGids = userGroups.filter(
+        (g, idx) => idx !== index && g.gid === group.gid,
+      );
+      if (duplicateGids.length > 0) {
+        groupErrors.groupGid = 'Group ID must be unique';
+      }
+      if (group.gid < MIN_REGULAR_GID || group.gid > MAX_REGULAR_GID) {
+        groupWarnings.groupGid = `Standard GID range is ${MIN_REGULAR_GID}–${MAX_REGULAR_GID}`;
+      }
+    }
+
     if (Object.keys(groupErrors).length > 0) {
       errors[index] = groupErrors;
+    }
+    if (Object.keys(groupWarnings).length > 0) {
+      warnings[index] = groupWarnings;
     }
   }
 
@@ -942,6 +1006,7 @@ export function useUserGroupsValidation(): UsersStepValidation {
 
   return {
     errors,
+    warnings,
     disabledNext: !canProceed,
   };
 }

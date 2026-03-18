@@ -1,30 +1,6 @@
 import { Store } from 'redux';
 import { v4 as uuidv4 } from 'uuid';
 
-import { parseSizeUnit } from './parseSizeUnit';
-
-import {
-  CENTOS_9,
-  FIRST_BOOT_SERVICE_DATA,
-  FIRSTBOOT_PATH,
-  FIRSTBOOT_SERVICE_PATH,
-  IMAGE_MODE,
-  RHEL_10,
-  RHEL_8,
-  RHEL_9,
-  SATELLITE_PATH,
-  SATELLITE_SERVICE_DATA,
-  SATELLITE_SERVICE_PATH,
-} from '../../../constants';
-import { RootState } from '../../../store';
-import {
-  CockpitAwsUploadRequestOptions,
-  CockpitBlueprintResponse,
-  CockpitCreateBlueprintRequest,
-  CockpitImageRequest,
-  CockpitUploadTypes,
-} from '../../../store/cockpit/types';
-import { selectIsOnPremise } from '../../../store/envSlice';
 import {
   AapRegistration,
   AwsUploadRequestOptions,
@@ -55,8 +31,33 @@ import {
   UploadTypes,
   User,
   VolumeGroup,
-} from '../../../store/imageBuilderApi';
-import { ApiRepositoryImportResponseRead } from '../../../store/service/contentSourcesApi';
+} from '@/store/api/backend';
+import { ApiRepositoryImportResponseRead } from '@/store/api/contentSources';
+import {
+  CockpitAwsUploadRequestOptions,
+  CockpitBlueprintResponse,
+  CockpitCreateBlueprintRequest,
+  CockpitImageRequest,
+  CockpitUploadTypes,
+} from '@/store/cockpit';
+
+import { parseSizeUnit } from './parseSizeUnit';
+
+import {
+  CENTOS_9,
+  FIRST_BOOT_SERVICE_DATA,
+  FIRSTBOOT_PATH,
+  FIRSTBOOT_SERVICE_PATH,
+  IMAGE_MODE,
+  RHEL_10,
+  RHEL_8,
+  RHEL_9,
+  SATELLITE_PATH,
+  SATELLITE_SERVICE_DATA,
+  SATELLITE_SERVICE_PATH,
+} from '../../../constants';
+import { RootState } from '../../../store';
+import { selectIsOnPremise } from '../../../store/envSlice';
 import { isImageMode as isImageModeDistribution } from '../../../store/typeGuards';
 import {
   ComplianceType,
@@ -123,6 +124,7 @@ import {
   selectUseLatest,
   selectUserGroups,
   selectUsers,
+  selectVerifiedLocaleLangpacks,
   UserWithAdditionalInfo,
   wizardState,
 } from '../../../store/wizardSlice';
@@ -134,7 +136,7 @@ import {
   Units,
 } from '../steps/FileSystem/fscTypes';
 import { getConversionFactor } from '../steps/FileSystem/fscUtilities';
-import { PackageRepository } from '../steps/Packages/Packages';
+import { PackageRepository } from '../steps/Packages/packagesTypes';
 import {
   convertSchemaToIBCustomRepo,
   convertSchemaToIBPayloadRepo,
@@ -439,6 +441,16 @@ function commonRequestToState(
     }
   }
 
+  const rawPackageNames =
+    request.customizations.packages?.filter((pkg) => !pkg.startsWith('@')) ??
+    [];
+  const localeLangpacks = rawPackageNames.filter((p) =>
+    /^langpacks-[a-z]+$/.test(p),
+  );
+  const otherPackageNames = rawPackageNames.filter(
+    (p) => !/^langpacks-[a-z]+$/.test(p),
+  );
+
   return {
     details: {
       blueprintName: request.name || '',
@@ -455,18 +467,10 @@ function commonRequestToState(
         hasPassword: user.hasPassword || false,
       })) || [],
     userGroups:
-      request.customizations.groups?.map((group) => {
-        const userGroup: {
-          name: string;
-          gid?: number;
-        } = {
-          name: group.name,
-        };
-        if (group.gid !== undefined) {
-          userGroup.gid = group.gid;
-        }
-        return userGroup;
-      }) || [],
+      request.customizations.groups?.map((group) => ({
+        name: group.name,
+        ...(group.gid !== undefined && { gid: group.gid }),
+      })) || [],
     compliance:
       compliancePolicyID !== undefined
         ? {
@@ -535,14 +539,12 @@ function commonRequestToState(
       recommendedRepositories: [],
       redHatRepositories: [],
     },
-    packages:
-      request.customizations.packages
-        ?.filter((pkg) => !pkg.startsWith('@'))
-        .map((pkg) => ({
-          name: pkg,
-          summary: '',
-          repository: '' as PackageRepository,
-        })) || [],
+    packages: otherPackageNames.map((pkg) => ({
+      name: pkg,
+      summary: '',
+      repository: '' as PackageRepository,
+    })),
+    verifiedLocaleLangpacks: localeLangpacks,
     groups:
       request.customizations.packages
         ?.filter((grp) => grp.startsWith('@'))
@@ -1104,11 +1106,15 @@ const getFileSystem = (state: RootState): Filesystem[] | undefined => {
 const getPackages = (state: RootState) => {
   const packages = selectPackages(state);
   const groups = selectGroups(state);
+  const verifiedLocaleLangpacks = selectVerifiedLocaleLangpacks(state);
+  const packageNames = new Set(packages.map((pkg) => pkg.name));
+  for (const pkg of verifiedLocaleLangpacks) {
+    packageNames.add(pkg);
+  }
+  const list = [...packageNames].concat(groups.map((grp) => '@' + grp.name));
 
-  if (packages.length > 0 || groups.length > 0) {
-    return packages
-      .map((pkg) => pkg.name)
-      .concat(groups.map((grp) => '@' + grp.name));
+  if (list.length > 0) {
+    return list;
   }
   return undefined;
 };

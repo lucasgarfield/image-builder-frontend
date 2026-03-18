@@ -1,9 +1,7 @@
+import { CustomRepository, Repository } from '@/store/api/backend';
+import { ApiRepositoryResponseRead } from '@/store/api/contentSources';
+
 import { ContentOrigin } from '../../../../../constants';
-import { ApiRepositoryResponseRead } from '../../../../../store/contentSourcesApi';
-import {
-  CustomRepository,
-  Repository,
-} from '../../../../../store/imageBuilderApi';
 
 // Utility function to convert from Content Sources to Image Builder custom repo API schema
 export const convertSchemaToIBCustomRepo = (

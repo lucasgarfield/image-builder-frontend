@@ -4,15 +4,13 @@ import type { Router as RemixRouter } from '@remix-run/router';
 import { screen, waitFor } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 
+import { CreateBlueprintRequest, ImageRequest } from '@/store/api/backend';
+
 import ImageWizard from '../../../Components/CreateImageWizard';
 import { RHEL_10 } from '../../../constants';
-import {
-  CreateBlueprintRequest,
-  ImageRequest,
-} from '../../../store/imageBuilderApi';
 import { getLastBlueprintReq } from '../../mocks/cockpit/cockpitFile';
 import { server } from '../../mocks/server';
-import { renderCustomRoutesWithReduxRouter } from '../../testUtils';
+import { renderCustomRoutesWithReduxRouter } from '../../renderUtils';
 
 type RequestTypes = 'GET' | 'PUT' | 'POST' | 'DELETE';
 

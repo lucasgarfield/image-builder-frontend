@@ -1,4 +1,4 @@
-import type { ImageTypes } from './store/imageBuilderApi';
+import type { ImageTypes } from './store/api/backend';
 
 export const IMAGE_BUILDER_API = '/api/image-builder/v1';
 export const RHSM_API = '/api/rhsm/v2';
@@ -249,7 +249,6 @@ export const AWS_REGIONS = [
 ];
 
 export const AWS_S3_EXPIRATION_TIME_IN_HOURS = 168; // 7 days
-export const AWS_S3_EXPIRATION_TIME_IN_HOURS_LEGACY = 6; // Legacy 6 hours expiration
 export const OCI_STORAGE_EXPIRATION_TIME_IN_DAYS = 7;
 
 // Anchor element for all modals that we display so that they play nice with top-most components like Quickstarts
@@ -356,3 +355,9 @@ export const SEARCH_INPUT = '';
 export const BLUEPRINTS_DIR = 'cockpit-image-builder';
 
 export const DEFAULT_TIMEZONE = 'Etc/UTC';
+
+// System groups available by default in RHEL
+export const SYSTEM_GROUPS = ['wheel'];
+
+// Validation error key for undefined groups warning
+export const UNDEFINED_GROUPS_WARNING_KEY = 'undefinedGroupsWarning';

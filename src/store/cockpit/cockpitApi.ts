@@ -11,24 +11,15 @@ import { fsinfo } from 'cockpit/fsinfo';
 import TOML from 'smol-toml';
 import { v4 as uuidv4 } from 'uuid';
 
-import type {
-  Blueprint as CloudApiBlueprint,
-  ComposeRequest as CloudApiComposeRequest,
-  ImageTypes as CloudApiImageTypes,
-  Customizations,
-} from './composerCloudApi';
-// We have to work around RTK query here, since it doesn't like splitting
-// out the same api into two separate apis. So, instead, we can just
-// inherit/import the `contentSourcesApi` and build on top of that.
-// This is fine since all the api endpoints for on-prem should query
-// the same unix socket. This allows us to split out the code a little
-// bit so that the `cockpitApi` doesn't become a monolith.
-import { contentSourcesApi } from './contentSourcesApi';
 import {
+  type Blueprint as CloudApiBlueprint,
+  type ComposeRequest as CloudApiComposeRequest,
+  type ImageTypes as CloudApiImageTypes,
   type CockpitCreateBlueprintApiArg,
   type CockpitCreateBlueprintRequest,
   type CockpitImageRequest,
   type CockpitUpdateBlueprintApiArg,
+  type Customizations,
   GetArchitecturesApiArg,
   GetOscapCustomizationsApiArg,
   GetOscapProfilesApiArg,
@@ -72,7 +63,14 @@ import {
   GetOscapProfilesApiResponse,
   OpenScapProfile,
   UpdateBlueprintApiResponse,
-} from '../service/imageBuilderApi';
+} from '../api/backend/hosted/imageBuilderApi';
+// We have to work around RTK query here, since it doesn't like splitting
+// out the same api into two separate apis. So, instead, we can just
+// inherit/import the `contentSourcesApi` and build on top of that.
+// This is fine since all the api endpoints for on-prem should query
+// the same unix socket. This allows us to split out the code a little
+// bit so that the `cockpitApi` doesn't become a monolith.
+import { contentSourcesApi } from '../api/contentSources/onprem';
 
 const lookupDatastreamDistro = (distribution: string) => {
   if (distribution.startsWith('fedora')) {
@@ -670,7 +668,7 @@ export const cockpitApi = contentSourcesApi.injectEndpoints({
         },
       }),
       getComposes: builder.query<GetComposesApiResponse, GetComposesApiArg>({
-        queryFn: async () => {
+        queryFn: async (queryArgs) => {
           try {
             const blueprintsDir = await getBlueprintsPath();
             const info = await fsinfo(blueprintsDir, ['entries'], {
@@ -681,17 +679,26 @@ export const cockpitApi = contentSourcesApi.injectEndpoints({
             for (const entry of entries) {
               composes = composes.concat(await readComposes(entry[0]));
             }
+            const totalCount = composes.length;
+            const offset = queryArgs.offset ?? 0;
+            const limit = queryArgs.limit ?? 100;
+            const paginatedComposes = composes.slice(offset, offset + limit);
             return {
               data: {
                 meta: {
-                  count: composes.length,
+                  count: totalCount,
                 },
                 links: {
-                  first: composes.length > 0 ? composes[0].id : '',
+                  first:
+                    paginatedComposes.length > 0
+                      ? paginatedComposes[0].id
+                      : '',
                   last:
-                    composes.length > 0 ? composes[composes.length - 1].id : '',
+                    paginatedComposes.length > 0
+                      ? paginatedComposes[paginatedComposes.length - 1].id
+                      : '',
                 },
-                data: composes,
+                data: paginatedComposes,
               },
             };
           } catch (error) {
@@ -706,17 +713,26 @@ export const cockpitApi = contentSourcesApi.injectEndpoints({
         queryFn: async (queryArgs) => {
           try {
             const composes = await readComposes(queryArgs.id);
+            const totalCount = composes.length;
+            const offset = queryArgs.offset ?? 0;
+            const limit = queryArgs.limit ?? 100;
+            const paginatedComposes = composes.slice(offset, offset + limit);
             return {
               data: {
                 meta: {
-                  count: composes.length,
+                  count: totalCount,
                 },
                 links: {
-                  first: composes.length > 0 ? composes[0].id : '',
+                  first:
+                    paginatedComposes.length > 0
+                      ? paginatedComposes[0].id
+                      : '',
                   last:
-                    composes.length > 0 ? composes[composes.length - 1].id : '',
+                    paginatedComposes.length > 0
+                      ? paginatedComposes[paginatedComposes.length - 1].id
+                      : '',
                 },
-                data: composes,
+                data: paginatedComposes,
               },
             };
           } catch (error) {

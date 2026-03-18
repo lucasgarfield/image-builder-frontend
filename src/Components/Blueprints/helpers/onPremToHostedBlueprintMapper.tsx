@@ -1,5 +1,3 @@
-import { RHEL_10 } from '../../../constants';
-import { Blueprint as CloudApiBlueprint } from '../../../store/cockpit/composerCloudApi';
 import {
   BlueprintExportResponse,
   Container,
@@ -17,7 +15,10 @@ import {
   OpenScap,
   Services,
   Timezone,
-} from '../../../store/imageBuilderApi';
+} from '@/store/api/backend';
+import { Blueprint as CloudApiBlueprint } from '@/store/cockpit';
+
+import { RHEL_10 } from '../../../constants';
 import { getHostDistro } from '../../../Utilities/getHostInfo';
 
 // Blueprint as defined by the osbuild-composer cloudapi's /compose
@@ -77,6 +78,7 @@ export type CustomizationsOnPrem = {
   hostname?: string;
   kernel?: Kernel;
   user?: UserOnPrem[];
+  group?: GroupOnPrem[];
   groups?: GroupOnPrem[];
   timezone?: Timezone;
   locale?: Locale;
@@ -151,7 +153,13 @@ export const mapOnPremToHosted = async (
         users !== undefined || user_keys !== undefined
           ? [...(users ? users : []), ...(user_keys ? user_keys : [])]
           : undefined,
-      groups: blueprint.customizations?.groups,
+      groups:
+        blueprint.customizations?.group || blueprint.customizations?.groups
+          ? [
+              ...(blueprint.customizations.group ?? []),
+              ...(blueprint.customizations.groups ?? []),
+            ]
+          : undefined,
       filesystem: blueprint.customizations?.filesystem?.map(
         ({ minsize, size, ...fs }) => ({
           min_size: minsize || size,
@@ -251,6 +259,10 @@ export const mapHostedToOnPrem = (
         password: u.password || '',
       };
     });
+  }
+
+  if (blueprint.customizations.groups) {
+    result.customizations!.group = blueprint.customizations.groups;
   }
 
   if (blueprint.customizations.services) {

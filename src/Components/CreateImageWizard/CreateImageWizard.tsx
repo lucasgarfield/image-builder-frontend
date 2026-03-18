@@ -15,6 +15,8 @@ import { WizardStepType } from '@patternfly/react-core/dist/esm/components/Wizar
 import useChrome from '@redhat-cloud-services/frontend-components/useChrome';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
+import { useCustomizationRestrictions } from '@/store/api/distributions';
+
 import AAPStep from './steps/AAP';
 import DetailsStep from './steps/Details';
 import FileSystemStep from './steps/FileSystem';
@@ -32,12 +34,12 @@ import RepositoriesStep from './steps/Repositories';
 import ReviewStep from './steps/Review';
 import ReviewWizardFooter from './steps/Review/Footer/Footer';
 import ServicesStep from './steps/Services';
-import SnapshotStep from './steps/Snapshot';
+import RepeatableBuildStep from './steps/Snapshot';
 import Aws from './steps/TargetEnvironment/Aws';
 import Azure from './steps/TargetEnvironment/Azure';
 import Gcp from './steps/TargetEnvironment/Gcp';
 import TimezoneStep from './steps/Timezone';
-import UsersStep from './steps/Users';
+import UsersStep from './steps/UsersAndGroups';
 import {
   useAAPValidation,
   useAzureValidation,
@@ -70,14 +72,12 @@ import {
   RHEL_9,
 } from '../../constants';
 import { useGetUser } from '../../Hooks';
-import { useCustomizationRestrictions } from '../../store/distributions';
 import { selectIsOnPremise, selectPathResolver } from '../../store/envSlice';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import './CreateImageWizard.scss';
 import {
   addImageType,
   changeArchitecture,
-  changeAwsShareMethod,
   changeDistribution,
   changeTimezone,
   initializeWizard,
@@ -228,10 +228,6 @@ const CreateImageWizard = ({ isEdit }: CreateImageWizardProps) => {
       const arch = await getHostArch();
       dispatch(changeArchitecture(arch));
     };
-
-    if (isOnPremise) {
-      dispatch(changeAwsShareMethod('manual'));
-    }
 
     if (isOnPremise && !isEdit) {
       if (!searchParams.get('release')) {
@@ -657,7 +653,7 @@ const CreateImageWizard = ({ isEdit }: CreateImageWizardProps) => {
                   />
                 }
               >
-                <SnapshotStep />
+                <RepeatableBuildStep />
               </WizardStep>,
               <WizardStep
                 name='Repositories'

@@ -10,16 +10,14 @@ import {
   Spinner,
 } from '@patternfly/react-core';
 
-import { useSelectorHandlers } from './useSelectorHandlers';
-
 import {
   useGetComplianceCustomizationsQuery,
   useLazyGetComplianceCustomizationsQuery,
-} from '../../../../../store/backendApi';
-import {
-  PolicyRead,
-  usePoliciesQuery,
-} from '../../../../../store/complianceApi';
+} from '@/store/api/backend';
+import { PolicyRead, usePoliciesQuery } from '@/store/api/compliance';
+
+import { useSelectorHandlers } from './useSelectorHandlers';
+
 import { useAppDispatch, useAppSelector } from '../../../../../store/hooks';
 import { asDistribution } from '../../../../../store/typeGuards';
 import {

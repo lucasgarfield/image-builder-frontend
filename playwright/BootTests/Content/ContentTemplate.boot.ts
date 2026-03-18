@@ -1,8 +1,17 @@
 import { expect } from '@playwright/test';
 import { v4 as uuidv4 } from 'uuid';
 
+import {
+  deleteRepository,
+  deleteTemplate,
+  navigateToRepositories,
+  navigateToTemplates,
+  pollForSystemInInventory,
+  pollForSystemTemplateAttachment,
+} from './helpers';
+
 import { test } from '../../fixtures/customizations';
-import { isHosted } from '../../helpers/helpers';
+import { isHosted, sleep } from '../../helpers/helpers';
 import { ensureAuthenticated, login } from '../../helpers/login';
 import {
   fillInImageOutput,
@@ -15,15 +24,6 @@ import {
   fillInDetails,
   registerWithActivationKey,
 } from '../../helpers/wizardHelpers';
-import {
-  deleteRepository,
-  deleteTemplate,
-  navigateToRepositories,
-  navigateToTemplates,
-  pollForSystemInInventory,
-  pollForSystemTemplateAttachment,
-  sleep,
-} from '../helpers/helpers';
 import {
   buildImage,
   constructFilePath,
@@ -88,11 +88,11 @@ test('Content integration test - Content Template', async ({
     await navigateToTemplates(page);
     await page.getByRole('button', { name: 'Create template' }).click();
 
+    await page.getByRole('button', { name: 'filter OS version' }).click();
+    await page.getByRole('menuitem', { name: 'RHEL 10' }).click();
+
     await page.getByRole('button', { name: 'filter architecture' }).click();
     await page.getByRole('menuitem', { name: 'x86_64' }).click();
-
-    await page.getByRole('button', { name: 'filter OS version' }).click();
-    await page.getByRole('menuitem', { name: 'el10' }).click();
 
     await page.getByRole('button', { name: 'Next', exact: true }).click();
 
@@ -164,12 +164,24 @@ test('Content integration test - Content Template', async ({
     await frame.getByRole('button', { name: 'Repeatable build' }).click();
     await frame.getByRole('radio', { name: 'Use a content template' }).click();
 
+    const templatesDropdown = frame.getByRole('button', {
+      name: 'Select content template',
+    });
+    await templatesDropdown.click();
+
+    const templatesSearchInput = frame.getByRole('textbox', {
+      name: 'Filter content templates',
+    });
+    await templatesSearchInput.fill(templateName);
     await expect(frame.getByText(templateName)).toBeVisible({ timeout: 30000 });
 
-    const templateRow = frame
-      .getByRole('row')
-      .filter({ hasText: templateName });
-    await templateRow.getByRole('radio').click();
+    const templateOption = frame.getByRole('menuitem', {
+      name: 'content-template-test-',
+    });
+    await templateOption.click();
+    await expect(
+      frame.getByRole('button', { name: /content-template-test-/ }),
+    ).toBeVisible();
   });
 
   // SMELL: This shouldn't be necessary, but without loading this wizard step, the package search will fail

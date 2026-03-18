@@ -1,9 +1,9 @@
+import { RecommendPackageApiResponse } from '@/store/api/backend';
 import {
   ApiRepositoryRpm,
   ApiSearchPackageGroupResponse,
   ApiSearchRpmResponse,
-} from '../../store/contentSourcesApi';
-import { RecommendPackageApiResponse } from '../../store/imageBuilderApi';
+} from '@/store/api/contentSources';
 
 export const mockSourcesPackagesResults = (
   search: string,

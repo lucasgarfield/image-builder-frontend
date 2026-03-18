@@ -31,6 +31,18 @@ import useChrome from '@redhat-cloud-services/frontend-components/useChrome';
 import cockpit from 'cockpit';
 import { useDispatch } from 'react-redux';
 
+import {
+  BlueprintItem,
+  ComposesResponseItem,
+  GetBlueprintComposesApiArg,
+  GetBlueprintsApiArg,
+  useGetBlueprintComposesQuery,
+  useGetBlueprintsQuery,
+  useGetComposesQuery,
+  useGetComposeStatusQuery,
+} from '@/store/api/backend';
+import { LocalUploadStatus } from '@/store/cockpit';
+
 import ImagesEmptyState from './EmptyState';
 import {
   AwsDetails,
@@ -49,20 +61,17 @@ import { AwsTarget, Target } from './Target';
 import {
   AMPLITUDE_MODULE_NAME,
   AWS_S3_EXPIRATION_TIME_IN_HOURS,
-  AWS_S3_EXPIRATION_TIME_IN_HOURS_LEGACY,
   OCI_STORAGE_EXPIRATION_TIME_IN_DAYS,
   PAGINATION_LIMIT,
   PAGINATION_OFFSET,
   SEARCH_INPUT,
   STATUS_POLLING_INTERVAL,
 } from '../../constants';
-import { useCockpitMachinesAvailable, useGetUser } from '../../Hooks';
 import {
-  useGetBlueprintComposesQuery,
-  useGetBlueprintsQuery,
-  useGetComposesQuery,
-  useGetComposeStatusQuery,
-} from '../../store/backendApi';
+  useCockpitMachinesAvailable,
+  useEffectiveBlueprintId,
+  useGetUser,
+} from '../../Hooks';
 import {
   selectBlueprintSearchInput,
   selectBlueprintVersionFilter,
@@ -72,15 +81,8 @@ import {
   selectSelectedBlueprintId,
   setBlueprintId,
 } from '../../store/BlueprintSlice';
-import { LocalUploadStatus } from '../../store/cockpit/composerCloudApi';
 import { selectIsOnPremise } from '../../store/envSlice';
 import { useAppSelector } from '../../store/hooks';
-import {
-  BlueprintItem,
-  ComposesResponseItem,
-  GetBlueprintComposesApiArg,
-  GetBlueprintsApiArg,
-} from '../../store/imageBuilderApi';
 import { hasBootcRequest } from '../../store/typeGuards';
 import { bootcReferenceToOSDisplayLabel } from '../../Utilities/distributionToOSShortId';
 import {
@@ -88,7 +90,6 @@ import {
   timestampToDisplayString,
   timestampToDisplayStringDetailed,
 } from '../../Utilities/time';
-import { useFlag } from '../../Utilities/useGetEnvironment';
 import { AWSLaunchModal } from '../Launch/AWSLaunchModal';
 import { AzureLaunchModal } from '../Launch/AzureLaunchModal';
 import { GcpLaunchModal } from '../Launch/GcpLaunchModal';
@@ -98,7 +99,7 @@ const ImagesTable = () => {
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(10);
 
-  const selectedBlueprintId = useAppSelector(selectSelectedBlueprintId);
+  const effectiveBlueprintId = useEffectiveBlueprintId();
   const blueprintSearchInput =
     useAppSelector(selectBlueprintSearchInput) || SEARCH_INPUT;
   const blueprintVersionFilter = useAppSelector(selectBlueprintVersionFilter);
@@ -126,7 +127,7 @@ const ImagesTable = () => {
     {
       selectFromResult: ({ data }) => ({
         selectedBlueprintVersion: data?.data.find(
-          (blueprint: BlueprintItem) => blueprint.id === selectedBlueprintId,
+          (blueprint: BlueprintItem) => blueprint.id === effectiveBlueprintId,
         )?.version,
       }),
     },
@@ -139,7 +140,7 @@ const ImagesTable = () => {
   };
 
   const searchParamsGetBlueprintComposes: GetBlueprintComposesApiArg = {
-    id: selectedBlueprintId as string,
+    id: effectiveBlueprintId as string,
     limit: perPage,
     offset: perPage * (page - 1),
   };
@@ -154,8 +155,9 @@ const ImagesTable = () => {
     isSuccess: isBlueprintsSuccess,
     isLoading: isLoadingBlueprintsCompose,
     isError: isBlueprintsError,
+    error: blueprintsError,
   } = useGetBlueprintComposesQuery(searchParamsGetBlueprintComposes, {
-    skip: !selectedBlueprintId,
+    skip: !effectiveBlueprintId,
   });
 
   const {
@@ -174,15 +176,15 @@ const ImagesTable = () => {
         'edge-installer',
       ],
     },
-    { skip: !!selectedBlueprintId },
+    { skip: !!effectiveBlueprintId },
   );
 
-  const data = selectedBlueprintId ? blueprintsComposes : composesData;
-  const isSuccess = selectedBlueprintId
+  const data = effectiveBlueprintId ? blueprintsComposes : composesData;
+  const isSuccess = effectiveBlueprintId
     ? isBlueprintsSuccess
     : isComposesSuccess;
-  const isError = selectedBlueprintId ? isBlueprintsError : isComposesError;
-  const isLoading = selectedBlueprintId
+  const isError = effectiveBlueprintId ? isBlueprintsError : isComposesError;
+  const isLoading = effectiveBlueprintId
     ? isLoadingBlueprintsCompose
     : isLoadingComposes;
 
@@ -198,7 +200,21 @@ const ImagesTable = () => {
   // we create query functions for the other endpoints. We're skipping
   // this check because the query request fails, since the `cockpitApi`
   // still doesn't know how to query the composes endpoint
+  const isBlueprintNotFound =
+    effectiveBlueprintId &&
+    blueprintsError &&
+    typeof blueprintsError === 'object' &&
+    'status' in blueprintsError &&
+    blueprintsError.status === 404;
+
   if (!isOnPremise && !isSuccess) {
+    if (isBlueprintNotFound) {
+      return (
+        <Alert variant='warning' title='Blueprint not found'>
+          <p>Blueprint {effectiveBlueprintId} not found.</p>
+        </Alert>
+      );
+    }
     if (isError) {
       return (
         <Alert variant='warning' title='Service unavailable'>
@@ -217,7 +233,7 @@ const ImagesTable = () => {
   }
 
   let composes = data?.data;
-  if (selectedBlueprintId && blueprintVersionFilter === 'latest') {
+  if (effectiveBlueprintId && blueprintVersionFilter === 'latest') {
     composes = composes?.filter((compose) => {
       return compose.blueprint_version === selectedBlueprintVersion;
     });
@@ -263,7 +279,7 @@ const ImagesTable = () => {
             <Tr>
               <Td colSpan={12}>
                 <ImagesEmptyState
-                  selectedBlueprint={selectedBlueprintId || ''}
+                  selectedBlueprint={effectiveBlueprintId || ''}
                 />
               </Td>
             </Tr>
@@ -473,11 +489,8 @@ type AwsS3RowPropTypes = {
 };
 
 const AwsS3Row = ({ compose, rowIndex }: AwsS3RowPropTypes) => {
-  const s3ExpirationFlag = useFlag('image-builder.s3-expiration');
   const hoursToExpiration = computeHoursToExpiration(compose.created_at);
-  const awsS3ExpirationTime = s3ExpirationFlag
-    ? AWS_S3_EXPIRATION_TIME_IN_HOURS
-    : AWS_S3_EXPIRATION_TIME_IN_HOURS_LEGACY;
+  const awsS3ExpirationTime = AWS_S3_EXPIRATION_TIME_IN_HOURS;
   const isExpired = hoursToExpiration >= awsS3ExpirationTime;
 
   const details = <AwsS3Details compose={compose} />;

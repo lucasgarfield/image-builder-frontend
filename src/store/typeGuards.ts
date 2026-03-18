@@ -1,4 +1,3 @@
-import { Bootc } from './cockpit/composerCloudApi';
 import {
   Awss3UploadStatus,
   AwsUploadRequestOptions,
@@ -12,7 +11,9 @@ import {
   OciUploadStatus,
   UploadRequest,
   UploadStatus,
-} from './imageBuilderApi';
+} from './api/backend/hosted';
+// import from ./cockpit/types to break circular dependency
+import { Bootc } from './cockpit/types';
 
 import { IMAGE_MODE, targetOptions } from '../constants';
 

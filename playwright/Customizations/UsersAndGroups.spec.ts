@@ -1,0 +1,720 @@
+import * as fsPromises from 'fs/promises';
+import * as path from 'path';
+
+import { expect } from '@playwright/test';
+import { v4 as uuidv4 } from 'uuid';
+
+import { test } from '../fixtures/customizations';
+import {
+  exportedGroupsBP,
+  exportedUsersBP,
+} from '../fixtures/data/exportBlueprintContents';
+import { isHosted } from '../helpers/helpers';
+import { ensureAuthenticated } from '../helpers/login';
+import {
+  fillInImageOutput,
+  ibFrame,
+  navigateToLandingPage,
+} from '../helpers/navHelpers';
+import {
+  createBlueprint,
+  deleteBlueprint,
+  exportBlueprint,
+  fillInDetails,
+  fillInImageOutputGuest,
+  importBlueprint,
+  registerLater,
+  verifyExportedBlueprint,
+} from '../helpers/wizardHelpers';
+
+const validRSAKey =
+  'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCduw9WD1Tw1pat5x+FzMoZGd3QYDcxAPEvgy5shnSzCYsUsO/OTnG2OrN5UXlQ/6fM1Ass5b54ttbsjORxz90ckaKf7W1qufyiuRbDreEYRVabzFDZKeAI5C0pMPya7Fui4vlChsXAH3XuuiJqwtXFjVQbkyI/F9jkVEJZfqo9AAFWF8L33xLXEq/7WfgB9n8NBEL8QX7R8m/ATpKWyOXkWM/welXgGSeRN+dMllwHcX1VnRim0MMXo9JIp39Nl/x9+2fYO8agYyE73zoJj2oueEhBpO9Vam1EziNuEKseIbVzz0VrfZyMeSN5o1+LWYPbCVETE3jUAbioUDxA/faB test@example.com';
+const validECDSAKey =
+  'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICKKKnEKnBMp5OGSW8R/zJJGNUcBV8LJ+VqnHB8uK9qx test@example.com';
+
+test('Create a blueprint with Users customization', async ({
+  page,
+  cleanup,
+}) => {
+  const blueprintName = 'test-' + uuidv4();
+
+  // Delete the blueprint after the run fixture
+  cleanup.add(() => deleteBlueprint(page, blueprintName));
+
+  await ensureAuthenticated(page);
+
+  // Navigate to IB landing page and get the frame
+  await navigateToLandingPage(page);
+  const frame = ibFrame(page);
+
+  await test.step('Navigate to Groups and users step', async () => {
+    await fillInImageOutput(frame);
+    await registerLater(frame);
+  });
+
+  await test.step('Test editable Group ID', async () => {
+    await frame.getByRole('button', { name: 'Groups and users' }).click();
+
+    const gidInput = frame.getByRole('textbox', { name: 'Group ID' });
+    await expect(gidInput).toBeVisible();
+
+    await frame.getByRole('textbox', { name: 'Group name' }).fill('testgroup');
+    await expect(gidInput).toHaveValue('1000');
+    await gidInput.fill('2000');
+    await expect(gidInput).toHaveValue('2000');
+
+    await gidInput.fill('500');
+    await gidInput.press('Tab');
+    await expect(frame.getByText('Group ID must be unique')).toBeHidden();
+
+    await gidInput.fill('abc');
+    await gidInput.press('Tab');
+    await expect(
+      frame.getByText('Invalid input. Must be a number'),
+    ).toBeVisible();
+
+    await gidInput.fill('12!@');
+    await gidInput.press('Tab');
+    await expect(
+      frame.getByText('Invalid input. Must be a number'),
+    ).toBeVisible();
+
+    await gidInput.fill('500');
+    await gidInput.press('Tab');
+    await expect(
+      frame.getByText('Invalid input. Must be a number'),
+    ).toBeHidden();
+
+    await expect(
+      frame.getByText('Standard GID range is 1000–60000'),
+    ).toBeVisible();
+
+    await gidInput.fill('1500');
+    await gidInput.press('Tab');
+    await expect(
+      frame.getByText('Standard GID range is 1000–60000'),
+    ).toBeHidden();
+
+    // GID above the standard range should show the warning
+    await gidInput.fill('70000');
+    await gidInput.press('Tab');
+    await expect(
+      frame.getByText('Standard GID range is 1000–60000'),
+    ).toBeVisible();
+
+    // Reset to a valid in-range GID
+    await gidInput.fill('1500');
+    await gidInput.press('Tab');
+
+    await frame.getByRole('button', { name: 'Add group' }).click();
+    const gidInputs = frame.getByRole('textbox', { name: 'Group ID' });
+    const groupNameInputs = frame.getByRole('textbox', {
+      name: 'Group name',
+    });
+    await groupNameInputs.nth(1).fill('testgroup2');
+    await gidInputs.nth(1).fill('1500');
+    await gidInputs.nth(1).press('Tab');
+    await expect(
+      frame.getByText('Group ID must be unique').first(),
+    ).toBeVisible();
+
+    await frame.getByRole('button', { name: 'Remove group' }).nth(1).click();
+    await groupNameInputs.first().fill('');
+    await gidInput.fill('');
+  });
+
+  await test.step('Create initial valid users', async () => {
+    // Create admin user with correct password and wheel group
+    await frame
+      .getByRole('textbox', { name: 'blueprint user name' })
+      .fill('admin1');
+    await frame
+      .getByRole('textbox', { name: 'blueprint user password' })
+      .fill('AdminPass123');
+    await frame.getByPlaceholder('Add user group').fill('wheel');
+    await frame.getByPlaceholder('Add user group').press('Enter');
+
+    // Verify admin checkbox is automatically checked due to wheel group
+    await expect(
+      frame.getByRole('checkbox', { name: 'Administrator' }),
+    ).toBeChecked();
+
+    // Verify password validation passes
+    await expect(
+      frame.getByText(
+        'Password must be at least 6 characters long: success status;',
+      ),
+    ).toBeVisible();
+
+    // Add second user with SSH key and custom group
+    await frame.getByRole('button', { name: 'Add user', exact: true }).click();
+
+    const usernameInputs = frame.getByRole('textbox', {
+      name: 'blueprint user name',
+    });
+    await usernameInputs.nth(1).fill('sshuser');
+
+    const sshInputs = frame.getByPlaceholder('Set SSH key');
+    await sshInputs.nth(1).fill(validRSAKey);
+
+    const groupInputs = frame.getByPlaceholder('Add user group');
+    await groupInputs.nth(1).fill('developers');
+    await groupInputs.nth(1).press('Enter');
+
+    const adminCheckboxes = frame.getByRole('checkbox', {
+      name: 'Administrator',
+    });
+    await expect(adminCheckboxes.nth(1)).not.toBeChecked();
+
+    // The 'developers' group is not defined in the Groups section and is not
+    // a system group, so a warning should appear
+    await expect(
+      frame.getByText(/User assigned to undefined group\(s\): developers/),
+    ).toBeVisible();
+
+    await expect(frame.getByRole('button', { name: 'Next' })).toBeEnabled();
+  });
+
+  await test.step('Test error scenarios', async () => {
+    // These tests do the following:
+    // 1. We test there are no error of specific type
+    // 2. We add a value that is invalid
+    // 3. We test that the error is visible
+    await frame.getByRole('button', { name: 'Add user', exact: true }).click();
+    await frame.getByRole('button', { name: 'Add user', exact: true }).click();
+    await frame.getByRole('button', { name: 'Add user', exact: true }).click();
+
+    const usernameInputs = frame.getByRole('textbox', {
+      name: 'blueprint user name',
+    });
+    const passwordInputs = frame.getByRole('textbox', {
+      name: 'blueprint user password',
+    });
+    const sshInputs = frame.getByPlaceholder('Set SSH key');
+    const groupInputs = frame.getByPlaceholder('Add user group');
+
+    // Test 1: Short password error
+    await expect(
+      frame.getByText(
+        'Password must be at least 6 characters long: error status;',
+      ),
+    ).toBeHidden();
+    await usernameInputs.nth(2).fill('testuser1');
+    await passwordInputs.nth(2).fill('short');
+    await expect(
+      frame
+        .getByText('Password must be at least 6 characters long: error status;')
+        .first(),
+    ).toBeVisible();
+
+    // Test 2: Invalid SSH key error
+    await expect(frame.getByText('Invalid SSH key;')).toBeHidden();
+    await sshInputs.nth(2).fill('invalid-ssh-key');
+    await expect(frame.getByText('Invalid SSH key')).toBeVisible();
+
+    // Test 3: Duplicate username error
+    await expect(
+      frame.getByText('Username already exists').first(),
+    ).toBeHidden();
+    await usernameInputs.nth(3).fill('admin1');
+    await expect(
+      frame.getByText('Username already exists').first(),
+    ).toBeVisible();
+
+    // Test 4: Empty username with password filled
+    await expect(
+      frame.getByRole('heading', {
+        name: 'Danger alert: Errors found',
+      }),
+    ).toBeHidden();
+    await usernameInputs.nth(4).fill('');
+    await passwordInputs.nth(4).fill('password123');
+    // Click Next to trigger validation
+    await frame.getByRole('button', { name: 'Next' }).click();
+    await expect(
+      frame.getByRole('heading', {
+        name: 'Danger alert: Errors found',
+      }),
+    ).toBeVisible();
+    // Go back to Groups and users step to continue with other tests
+    await frame.getByRole('button', { name: 'Groups and users' }).click();
+
+    // Test 5: Invalid group name with spaces
+    await expect(
+      frame.getByText('Expected format: <group-name>. Example: admin'),
+    ).toBeHidden();
+    await groupInputs.nth(4).fill('invalid group name with spaces');
+    await groupInputs.nth(4).press('Enter');
+    await expect(
+      frame.getByText('Expected format: <group-name>. Example: admin'),
+    ).toBeVisible();
+
+    // Test 6: Duplicate group within same user
+    await groupInputs.nth(4).fill('testgroup');
+    await groupInputs.nth(4).press('Enter');
+    await expect(frame.getByText('Group already exists.')).toBeHidden();
+    await groupInputs.nth(4).fill('testgroup');
+    await groupInputs.nth(4).press('Enter');
+    await expect(frame.getByText('Group already exists.')).toBeVisible();
+
+    // Test 7: Various invalid SSH key formats
+    await expect(frame.getByText('Invalid SSH key')).toHaveCount(1);
+    await sshInputs.nth(4).fill('not-an-ssh-key');
+    await expect(frame.getByText('Invalid SSH key').nth(1)).toBeVisible();
+    await expect(frame.getByText('Invalid SSH key')).toHaveCount(2);
+    await sshInputs
+      .nth(4)
+      .fill('invalid-type AAAAB3NzaC1yc2EAAAADAQABAAABAQCtest');
+    const invalidSshKey2 = frame.getByText('Invalid SSH key');
+    await expect(invalidSshKey2).toHaveCount(2);
+  });
+
+  await test.step('Test keyboard navigation and accessibility', async () => {
+    // Use the third user (index 2) because users 0 and 1 already have group chips
+    // from previous test steps, which would interfere with Tab navigation testing
+    const usernameInput = frame
+      .getByRole('textbox', {
+        name: 'blueprint user name',
+      })
+      .nth(2);
+    const passwordInput = frame
+      .getByRole('textbox', {
+        name: 'blueprint user password',
+      })
+      .nth(2);
+    const sshInput = frame.getByPlaceholder('Set SSH key').nth(2);
+    const groupInput = frame.getByPlaceholder('Add user group').nth(2);
+
+    // Tab through fields to test keyboard navigation
+    await usernameInput.press('Tab');
+    await expect(passwordInput).toBeFocused();
+
+    await passwordInput.press('Tab');
+    await expect(sshInput).toBeFocused();
+
+    await sshInput.press('Tab');
+    await expect(groupInput).toBeFocused();
+  });
+
+  await test.step('Clean up erroneous users', async () => {
+    const removeButtons = frame.getByRole('button', {
+      name: 'Remove user',
+    });
+
+    // Remove all the test users with errors (users 2, 3, 4, 5)
+    // We'll remove them in reverse order to maintain indices
+    for (let i = 4; i >= 2; i--) {
+      await removeButtons.nth(i).click();
+      const modalVisible = await frame
+        .getByRole('button', { name: 'Remove user' })
+        .isVisible();
+      if (modalVisible) {
+        await frame.getByRole('button', { name: 'Remove user' }).click();
+      }
+    }
+
+    // Verify only the original 2 valid users remain
+    const remainingUsers = frame.getByRole('textbox', {
+      name: 'blueprint user name',
+    });
+    await expect(remainingUsers).toHaveCount(2);
+
+    // Verify the remaining users are the correct ones
+    const remainingUsernameInputs = frame.getByRole('textbox', {
+      name: 'blueprint user name',
+    });
+    await expect(remainingUsernameInputs.nth(0)).toHaveValue('admin1');
+    await expect(remainingUsernameInputs.nth(1)).toHaveValue('sshuser');
+  });
+
+  await test.step('Add final valid user and test wheel group behavior', async () => {
+    await frame.getByRole('button', { name: 'Add user', exact: true }).click();
+
+    const usernameInputs = frame.getByRole('textbox', {
+      name: 'blueprint user name',
+    });
+    const passwordInputs = frame.getByRole('textbox', {
+      name: 'blueprint user password',
+    });
+    const sshInputs = frame.getByPlaceholder('Set SSH key');
+    const groupInputs = frame.getByPlaceholder('Add user group');
+    const adminCheckboxes = frame.getByRole('checkbox', {
+      name: 'Administrator',
+    });
+
+    // Add user with both password and SSH key
+    await usernameInputs.nth(2).fill('poweruser');
+    await passwordInputs.nth(2).fill('PowerUser123');
+    await sshInputs.nth(2).fill(validECDSAKey);
+
+    // Test wheel group auto-admin behavior
+    await groupInputs.nth(2).fill('wheel');
+    await groupInputs.nth(2).press('Enter');
+
+    // Admin checkbox should be checked automatically
+    await expect(adminCheckboxes.nth(2)).toBeChecked();
+
+    // Try to uncheck admin - should remove wheel group
+    await adminCheckboxes.nth(2).uncheck();
+    await expect(frame.getByText('wheel').nth(1)).toBeHidden();
+
+    // Re-add wheel group and verify it stays checked
+    await groupInputs.nth(2).fill('wheel');
+    await groupInputs.nth(2).press('Enter');
+    await expect(adminCheckboxes.nth(2)).toBeChecked();
+  });
+
+  await test.step('Test user removal scenarios', async () => {
+    // Test removing user with data (should show confirmation modal)
+    const removeButtons = frame.getByRole('button', {
+      name: 'Remove user',
+    });
+    await removeButtons.last().click();
+
+    // Confirm removal in modal
+    await expect(frame.getByText('Remove user poweruser?')).toBeVisible();
+    await frame.getByRole('button', { name: 'Remove user' }).click();
+
+    // Verify user is removed
+    await expect(frame.getByText('poweruser')).toBeHidden();
+
+    // Test removing empty user (should remove directly without modal)
+    await frame.getByRole('button', { name: 'Add user', exact: true }).click();
+
+    const initialUserCount = await removeButtons.count();
+    await removeButtons.last().click();
+
+    // Should remove directly without confirmation modal
+    const finalUserCount = removeButtons;
+    await expect(finalUserCount).toHaveCount(initialUserCount - 1);
+  });
+
+  await test.step('Verify users in Review step', async () => {
+    // Add user that has admin added the other way
+    // We want to confirm, that the Review step shows the admin
+    // correctly even after this workflow.
+    await frame.getByRole('button', { name: 'Add user', exact: true }).click();
+    await frame
+      .getByRole('textbox', { name: 'blueprint user name' })
+      .nth(2)
+      .fill('admin2');
+    await frame
+      .getByRole('textbox', { name: 'blueprint user password' })
+      .nth(2)
+      .fill('AdminPass123');
+    await frame.getByPlaceholder('Add user group').nth(2).fill('wheel');
+    await frame.getByPlaceholder('Add user group').nth(2).press('Enter');
+
+    // Verify admin checkbox is automatically checked due to wheel group
+    await frame
+      .getByRole('checkbox', { name: 'Administrator' })
+      .nth(2)
+      .isChecked();
+    await expect(frame.getByText('wheel').nth(1)).toBeVisible(); // Group was added
+    // Verify password validation passes
+    await expect(
+      frame
+        .getByText(
+          'Password must be at least 6 characters long: success status;',
+        )
+        .nth(1),
+    ).toBeVisible();
+
+    await frame.getByRole('button', { name: 'Review and finish' }).click();
+
+    // Verify admin user details
+    await expect(frame.getByText('admin1', { exact: true })).toBeVisible();
+    await expect(frame.getByText('●●●●●●●●').first()).toBeVisible(); // Masked password
+    await expect(frame.getByText('Enabled').first()).toBeVisible(); // Admin status
+
+    // Verify SSH user details
+    await expect(frame.getByText('sshuser')).toBeVisible();
+    await expect(frame.getByText('None').first()).toBeVisible(); // No password
+    await expect(frame.getByText('Disabled').first()).toBeVisible(); // Not admin
+
+    // Verify admin user details
+    await expect(frame.getByText('admin2', { exact: true })).toBeVisible();
+    await expect(frame.getByText('●●●●●●●●').first()).toBeVisible(); // Masked password
+    await expect(frame.getByText('Enabled').first()).toBeVisible(); // Admin status
+  });
+
+  await test.step('Create and save blueprint', async () => {
+    await fillInDetails(frame, blueprintName);
+    await createBlueprint(frame, blueprintName);
+  });
+
+  await test.step('Edit blueprint and modify users', async () => {
+    await frame.getByRole('button', { name: 'Edit blueprint' }).click();
+    await frame.getByTestId('revisit-users').click();
+
+    // Modify existing user
+    const passwordInputs = frame.getByRole('textbox', {
+      name: 'blueprint user password',
+    });
+    await passwordInputs.first().fill('NewAdminPass123');
+
+    // Add new user
+    await frame.getByRole('button', { name: 'Add user', exact: true }).click();
+    const usernameInputs = frame.getByRole('textbox', {
+      name: 'blueprint user name',
+    });
+    await usernameInputs.last().fill('newuser');
+
+    const newPasswordInputs = frame.getByRole('textbox', {
+      name: 'blueprint user password',
+    });
+    await newPasswordInputs.last().fill('NewUserPass123');
+
+    await frame.getByRole('button', { name: 'Review and finish' }).click();
+    await frame
+      .getByRole('button', { name: 'Save changes to blueprint' })
+      .click();
+  });
+
+  await test.step('Verify blueprint was saved correctly', async () => {
+    // Navigate back to the blueprint to verify it was saved
+    await frame.getByRole('button', { name: 'Edit blueprint' }).click();
+    await frame.getByTestId('revisit-users').click();
+
+    // Verify all users are present and correct
+    const usernameInputs = frame.getByRole('textbox', {
+      name: 'blueprint user name',
+    });
+
+    await expect(usernameInputs.nth(0)).toHaveValue('admin1');
+    await expect(usernameInputs.nth(1)).toHaveValue('sshuser');
+    await expect(usernameInputs.nth(2)).toHaveValue('admin2');
+    await expect(usernameInputs.nth(3)).toHaveValue('newuser');
+
+    // Verify password was is not returned
+    const passwordInputs = frame.getByRole('textbox', {
+      name: 'blueprint user password',
+    });
+    await expect(passwordInputs.nth(0)).toHaveValue('');
+    await expect(passwordInputs.nth(2)).toHaveValue('');
+    await expect(passwordInputs.nth(3)).toHaveValue('');
+
+    await frame.getByRole('button', { name: 'Review and finish' }).click();
+    await frame
+      .getByRole('button', { name: 'Save changes to blueprint' })
+      .click();
+  });
+
+  let exportedBP = '';
+
+  await test.step('Export BP', async () => {
+    exportedBP = await exportBlueprint(page);
+    cleanup.add(async () => {
+      await fsPromises.rm(path.dirname(exportedBP), { recursive: true });
+    });
+  });
+
+  await test.step('Review exported BP', async (step) => {
+    step.skip(
+      isHosted(),
+      'Only verify the contents of the exported blueprint in cockpit',
+    );
+    verifyExportedBlueprint(exportedBP, exportedUsersBP(blueprintName));
+  });
+
+  await test.step('Import blueprint', async () => {
+    await importBlueprint(frame, exportedBP);
+  });
+
+  await test.step('Verify imported users', async () => {
+    await fillInImageOutputGuest(frame);
+    await frame.getByRole('button', { name: 'Groups and users' }).click();
+
+    // Verify users are preserved
+    await expect(
+      frame.getByRole('textbox', { name: 'blueprint user name' }).nth(0),
+    ).toHaveValue('admin1');
+    await expect(
+      frame.getByRole('textbox', { name: 'blueprint user name' }).nth(1),
+    ).toHaveValue('sshuser');
+    await expect(
+      frame.getByRole('textbox', { name: 'blueprint user name' }).nth(2),
+    ).toHaveValue('admin2');
+    await expect(
+      frame.getByRole('textbox', { name: 'blueprint user name' }).nth(3),
+    ).toHaveValue('newuser');
+
+    await frame.getByRole('button', { name: 'Cancel' }).click();
+  });
+});
+
+test('Create a blueprint with Groups customization', async ({
+  page,
+  cleanup,
+}) => {
+  const blueprintName = 'test-' + uuidv4();
+
+  cleanup.add(() => deleteBlueprint(page, blueprintName));
+
+  await ensureAuthenticated(page);
+
+  await navigateToLandingPage(page);
+  const frame = ibFrame(page);
+
+  await test.step('Navigate to Groups and users step', async () => {
+    await fillInImageOutput(frame);
+    await registerLater(frame);
+    await frame.getByRole('button', { name: 'Groups and users' }).click();
+  });
+
+  await test.step('Add groups', async () => {
+    await frame.getByPlaceholder('Set group name').fill('developers');
+    await expect(frame.getByPlaceholder('Set group ID')).toBeVisible();
+
+    await frame.getByRole('button', { name: 'Add group' }).click();
+    await frame.getByPlaceholder('Set group name').last().fill('qa-team');
+
+    await frame.getByRole('button', { name: 'Add group' }).click();
+    await frame.getByPlaceholder('Set group name').last().fill('ops');
+  });
+
+  await test.step('Test group validation errors', async () => {
+    await frame.getByRole('button', { name: 'Add group' }).click();
+    const lastGroupInput = frame.getByPlaceholder('Set group name').last();
+    await lastGroupInput.fill('invalid group');
+    await expect(frame.getByText('Invalid group name')).toBeVisible();
+
+    await lastGroupInput.fill('developers');
+    await expect(
+      frame.getByText('Group name must be unique').first(),
+    ).toBeVisible();
+
+    await expect(
+      frame.getByRole('button', { name: 'Add group' }),
+    ).toBeDisabled();
+
+    await lastGroupInput.fill('valid-group');
+    await expect(frame.getByText('Invalid group name')).toHaveCount(0);
+    await expect(frame.getByText('Group name must be unique')).toHaveCount(0);
+  });
+
+  await test.step('Test group removal', async () => {
+    await frame
+      .getByRole('row')
+      .filter({ has: frame.locator('input[value="valid-group"]') })
+      .getByRole('button', { name: 'Remove group' })
+      .click();
+
+    const groupNameInputs = frame.getByPlaceholder('Set group name');
+    await expect(groupNameInputs).toHaveCount(3);
+    await expect(groupNameInputs.nth(0)).toHaveValue('developers');
+    await expect(groupNameInputs.nth(1)).toHaveValue('qa-team');
+    await expect(groupNameInputs.nth(2)).toHaveValue('ops');
+  });
+
+  await test.step('Test remove button disabled for single group', async () => {
+    await frame
+      .getByRole('row')
+      .filter({ has: frame.locator('input[value="ops"]') })
+      .getByRole('button', { name: 'Remove group' })
+      .click();
+    await frame
+      .getByRole('row')
+      .filter({ has: frame.locator('input[value="qa-team"]') })
+      .getByRole('button', { name: 'Remove group' })
+      .click();
+
+    await expect(
+      frame.getByRole('button', { name: 'Remove group' }).first(),
+    ).toBeDisabled();
+
+    await expect(frame.getByPlaceholder('Set group name').first()).toHaveValue(
+      'developers',
+    );
+
+    await frame.getByRole('button', { name: 'Add group' }).click();
+    await frame.getByPlaceholder('Set group name').last().fill('qa-team');
+
+    await frame.getByRole('button', { name: 'Add group' }).click();
+    await frame.getByPlaceholder('Set group name').last().fill('ops');
+  });
+
+  await test.step('Add a user assigned to a group', async () => {
+    await frame
+      .getByRole('textbox', { name: 'blueprint user name' })
+      .fill('testuser');
+    await frame
+      .getByRole('textbox', { name: 'blueprint user password' })
+      .fill('TestPass123');
+
+    await frame.getByPlaceholder('Add user group').fill('developers');
+    await frame.getByPlaceholder('Add user group').press('Enter');
+  });
+
+  await test.step('Verify groups in Review step', async () => {
+    await frame.getByRole('button', { name: 'Review and finish' }).click();
+
+    await expect(frame.getByTestId('groups-expandable')).toBeVisible();
+    await expect(
+      frame.getByTestId('groups-expandable').getByText('developers'),
+    ).toBeVisible();
+    await expect(
+      frame.getByTestId('groups-expandable').getByText('qa-team'),
+    ).toBeVisible();
+    await expect(
+      frame.getByTestId('groups-expandable').getByText('ops'),
+    ).toBeVisible();
+  });
+
+  await test.step('Fill details and create blueprint', async () => {
+    await fillInDetails(frame, blueprintName);
+    await createBlueprint(frame, blueprintName);
+  });
+
+  await test.step('Edit blueprint and verify groups persist', async () => {
+    await frame.getByRole('button', { name: 'Edit blueprint' }).click();
+    await frame.getByTestId('revisit-groups').click();
+
+    const groupNameInputs = frame.getByPlaceholder('Set group name');
+    await expect(groupNameInputs.nth(0)).toHaveValue('developers');
+    await expect(groupNameInputs.nth(1)).toHaveValue('qa-team');
+    await expect(groupNameInputs.nth(2)).toHaveValue('ops');
+
+    await frame.getByRole('button', { name: 'Review and finish' }).click();
+    await frame
+      .getByRole('button', { name: 'Save changes to blueprint' })
+      .click();
+  });
+
+  let exportedBP = '';
+
+  await test.step('Export BP', async () => {
+    exportedBP = await exportBlueprint(page);
+    cleanup.add(async () => {
+      await fsPromises.rm(path.dirname(exportedBP), { recursive: true });
+    });
+  });
+
+  await test.step('Review exported BP', async (step) => {
+    step.skip(
+      isHosted(),
+      'Only verify the contents of the exported blueprint in cockpit',
+    );
+    verifyExportedBlueprint(exportedBP, exportedGroupsBP(blueprintName));
+  });
+
+  await test.step('Import BP', async () => {
+    await importBlueprint(frame, exportedBP);
+  });
+
+  await test.step('Review imported groups', async () => {
+    await fillInImageOutputGuest(frame);
+    await frame.getByRole('button', { name: 'Groups and users' }).click();
+
+    const groupNameInputs = frame.getByPlaceholder('Set group name');
+    await expect(groupNameInputs.nth(0)).toHaveValue('developers');
+    await expect(groupNameInputs.nth(1)).toHaveValue('qa-team');
+    await expect(groupNameInputs.nth(2)).toHaveValue('ops');
+
+    await expect(
+      frame.getByRole('textbox', { name: 'blueprint user name' }).first(),
+    ).toHaveValue('testuser');
+
+    await frame.getByRole('button', { name: 'Cancel' }).click();
+  });
+});

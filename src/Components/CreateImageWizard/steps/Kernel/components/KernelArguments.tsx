@@ -1,9 +1,10 @@
 import React from 'react';
 
-import { FormGroup } from '@patternfly/react-core';
+import { FormGroup, HelperText, HelperTextItem } from '@patternfly/react-core';
+
+import { useGetOscapCustomizationsQuery } from '@/store/api/backend';
 
 import { useAppSelector } from '../../../../../store/hooks';
-import { useGetOscapCustomizationsQuery } from '../../../../../store/imageBuilderApi';
 import { asDistribution } from '../../../../../store/typeGuards';
 import {
   addKernelArg,
@@ -54,6 +55,12 @@ const KernelArguments = () => {
         stepValidation={stepValidation}
         fieldName='kernelAppend'
       />
+      <HelperText className='pf-v6-u-pt-sm'>
+        <HelperTextItem>
+          Enter additional kernel boot parameters. Examples: nomodeset or
+          console=ttyS0.
+        </HelperTextItem>
+      </HelperText>
     </FormGroup>
   );
 };

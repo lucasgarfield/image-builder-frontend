@@ -25,18 +25,17 @@ import {
 } from '@patternfly/react-icons';
 
 import {
-  AWS_S3_EXPIRATION_TIME_IN_HOURS,
-  AWS_S3_EXPIRATION_TIME_IN_HOURS_LEGACY,
-  OCI_STORAGE_EXPIRATION_TIME_IN_DAYS,
-} from '../../constants';
-import { useGetComposeStatusQuery } from '../../store/backendApi';
-import { CockpitComposesResponseItem } from '../../store/cockpit/types';
-import {
   ComposesResponseItem,
   ComposeStatus,
   ComposeStatusError,
-} from '../../store/imageBuilderApi';
-import { useFlag } from '../../Utilities/useGetEnvironment';
+  useGetComposeStatusQuery,
+} from '@/store/api/backend';
+import { CockpitComposesResponseItem } from '@/store/cockpit';
+
+import {
+  AWS_S3_EXPIRATION_TIME_IN_HOURS,
+  OCI_STORAGE_EXPIRATION_TIME_IN_DAYS,
+} from '../../constants';
 
 type ComposeStatusPropTypes = {
   compose: ComposesResponseItem | CockpitComposesResponseItem;
@@ -149,7 +148,6 @@ export const ExpiringStatus = ({
   const { data: composeStatus, isSuccess } = useGetComposeStatusQuery({
     composeId: compose.id,
   });
-  const s3ExpirationFlag = useFlag('image-builder.s3-expiration');
 
   if (!isSuccess) {
     return <Skeleton />;
@@ -167,9 +165,7 @@ export const ExpiringStatus = ({
   }
 
   const status = composeStatus!.image_status.status;
-  const awsS3ExpirationTime = s3ExpirationFlag
-    ? AWS_S3_EXPIRATION_TIME_IN_HOURS
-    : AWS_S3_EXPIRATION_TIME_IN_HOURS_LEGACY;
+  const awsS3ExpirationTime = AWS_S3_EXPIRATION_TIME_IN_HOURS;
   const remainingHours = awsS3ExpirationTime - timeToExpiration;
   const remainingDays = OCI_STORAGE_EXPIRATION_TIME_IN_DAYS - timeToExpiration;
 

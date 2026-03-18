@@ -1,7 +1,9 @@
 import { createSelector, createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { v4 as uuidv4 } from 'uuid';
 
-import type { ApiRepositoryResponseRead } from './contentSourcesApi';
+import type { ApiRepositoryResponseRead } from '@/store/api/contentSources';
+import type { ActivationKeys } from '@/store/api/rhsm';
+
 import type {
   CustomRepository,
   Distributions,
@@ -13,8 +15,7 @@ import type {
   Repository,
   Timezone,
   User,
-} from './imageBuilderApi';
-import type { ActivationKeys } from './rhsmApi';
+} from './api/backend';
 
 import type { FscModeType } from '../Components/CreateImageWizard/steps/FileSystem';
 import type {
@@ -26,10 +27,10 @@ import type {
   PartitioningCustomization,
   Units,
 } from '../Components/CreateImageWizard/steps/FileSystem/fscTypes';
-import type {
+import {
   GroupWithRepositoryInfo,
   IBPackageWithRepositoryInfo,
-} from '../Components/CreateImageWizard/steps/Packages/Packages';
+} from '../Components/CreateImageWizard/steps/Packages/packagesTypes';
 import type { AwsShareMethod } from '../Components/CreateImageWizard/steps/TargetEnvironment/Aws';
 import type {
   GcpAccountType,
@@ -43,11 +44,9 @@ import { yyyyMMddFormat } from '../Utilities/time';
 
 import type { RootState } from '.';
 
-// Group ID constants based on Linux LOGIN.DEFS(5) defaults
-// GID_MIN: minimum group ID for regular groups (default: 1000)
-// GID_MAX: maximum group ID for regular groups (default: 60000)
-const MIN_GROUP_ID = 1000;
-const MAX_GROUP_ID = 60000;
+// GID range for regular groups per LOGIN.DEFS(5) defaults
+export const MIN_REGULAR_GID = 1000;
+export const MAX_REGULAR_GID = 60000;
 
 type WizardModeOptions = 'create' | 'edit';
 
@@ -101,6 +100,11 @@ type UserGroupPayload = {
 type UserGroupNamePayload = {
   index: number;
   name: string;
+};
+
+type UserGroupGidPayload = {
+  index: number;
+  gid: number | undefined;
 };
 
 export type UserGroup = {
@@ -213,6 +217,7 @@ export type wizardState = {
   fips: {
     enabled: boolean;
   };
+  verifiedLocaleLangpacks: string[];
   metadata?: {
     parent_id: string | null;
     exported_at: string;
@@ -239,7 +244,7 @@ export const initialState: wizardState = {
   },
   aws: {
     accountId: '',
-    shareMethod: 'sources',
+    shareMethod: 'manual',
     source: undefined,
     region: 'us-east-1',
   },
@@ -328,6 +333,7 @@ export const initialState: wizardState = {
     enabled: false,
   },
   firstBoot: { script: '' },
+  verifiedLocaleLangpacks: [],
   users: [],
   userGroups: [{ name: '' }],
 };
@@ -604,6 +610,42 @@ export const selectFips = (state: RootState) => {
   return state.wizard.fips;
 };
 
+export const selectVerifiedLocaleLangpacks = (state: RootState) => {
+  return state.wizard.verifiedLocaleLangpacks;
+};
+
+const extractLanguageCode = (locale: string): string | undefined => {
+  const [regionPart] = locale.split('.');
+  const [languageCode] = regionPart.split('_');
+  if (!languageCode) {
+    return undefined;
+  }
+  const lc = languageCode.toLowerCase();
+  if (lc === 'c') {
+    return undefined;
+  }
+  return lc;
+};
+
+const getLangpackNameForLocale = (locale: string): string | undefined => {
+  const code = extractLanguageCode(locale);
+  return code ? `langpacks-${code}` : undefined;
+};
+
+export const selectLocaleLangpackCandidates = createSelector(
+  [selectLanguages],
+  (languages) => {
+    const set = new Set<string>();
+    for (const lang of languages ?? []) {
+      const pkg = getLangpackNameForLocale(lang);
+      if (pkg) {
+        set.add(pkg);
+      }
+    }
+    return Array.from(set);
+  },
+);
+
 // Derived selector for checking if we're in image mode
 export const selectIsImageMode = createSelector(
   [selectBlueprintMode],
@@ -683,7 +725,7 @@ export const wizardSlice = createSlice({
     },
     reinitializeAws: (state) => {
       state.aws.accountId = '';
-      state.aws.shareMethod = 'sources';
+      state.aws.shareMethod = 'manual';
       state.aws.source = undefined;
       state.aws.region = 'us-east-1';
     },
@@ -865,11 +907,6 @@ export const wizardSlice = createSlice({
       if (index !== -1) {
         state.fileSystem.partitions.splice(index, 1);
       }
-    },
-    changePartitionOrder: (state, action: PayloadAction<string[]>) => {
-      state.fileSystem.partitions = state.fileSystem.partitions.sort(
-        (a, b) => action.payload.indexOf(a.id) - action.payload.indexOf(b.id),
-      );
     },
     changePartitionMountpoint: (
       state,
@@ -1514,18 +1551,19 @@ export const wizardSlice = createSlice({
     },
     addUserGroup: (state) => {
       const existingGids = new Set(
-        state.userGroups.map((g) => g.gid).filter((gid) => gid !== undefined),
+        state.userGroups
+          .map((g) => g.gid)
+          .filter((gid): gid is number => gid !== undefined),
       );
-      let nextGid = MIN_GROUP_ID;
-      while (existingGids.has(nextGid) && nextGid <= MAX_GROUP_ID) {
+      let nextGid = MIN_REGULAR_GID;
+      while (existingGids.has(nextGid) && nextGid <= MAX_REGULAR_GID) {
         nextGid++;
       }
-
-      const newGroup: UserGroup = { name: '' };
-      if (nextGid <= MAX_GROUP_ID) {
-        newGroup.gid = nextGid;
+      if (nextGid <= MAX_REGULAR_GID) {
+        state.userGroups.push({ name: '', gid: nextGid });
+      } else {
+        state.userGroups.push({ name: '' });
       }
-      state.userGroups.push(newGroup);
     },
     setUserGroupNameByIndex: (
       state,
@@ -1536,17 +1574,29 @@ export const wizardSlice = createSlice({
       if (name.trim() === '') {
         delete state.userGroups[index].gid;
       } else if (state.userGroups[index].gid === undefined) {
-        // Re-assign gid if the group now has a valid name but no gid
         const existingGids = new Set(
-          state.userGroups.map((g) => g.gid).filter((gid) => gid !== undefined),
+          state.userGroups
+            .map((g) => g.gid)
+            .filter((gid): gid is number => gid !== undefined),
         );
-        let nextGid = MIN_GROUP_ID;
-        while (existingGids.has(nextGid) && nextGid <= MAX_GROUP_ID) {
+        let nextGid = MIN_REGULAR_GID;
+        while (existingGids.has(nextGid) && nextGid <= MAX_REGULAR_GID) {
           nextGid++;
         }
-        if (nextGid <= MAX_GROUP_ID) {
+        if (nextGid <= MAX_REGULAR_GID) {
           state.userGroups[index].gid = nextGid;
         }
+      }
+    },
+    setUserGroupGidByIndex: (
+      state,
+      action: PayloadAction<UserGroupGidPayload>,
+    ) => {
+      const { index, gid } = action.payload;
+      if (gid === undefined) {
+        delete state.userGroups[index].gid;
+      } else {
+        state.userGroups[index].gid = gid;
       }
     },
     removeUserGroup: (state, action: PayloadAction<number>) => {
@@ -1556,6 +1606,9 @@ export const wizardSlice = createSlice({
     },
     changeFips: (state, action: PayloadAction<boolean>) => {
       state.fips.enabled = action.payload;
+    },
+    setVerifiedLocaleLangpacks: (state, action: PayloadAction<string[]>) => {
+      state.verifiedLocaleLangpacks = action.payload;
     },
   },
 });
@@ -1603,7 +1656,6 @@ export const {
   changePartitionMinSize,
   changePartitionType,
   changePartitionName,
-  changePartitionOrder,
   changeDiskMinsize,
   changeDiskType,
   addDiskPartition,
@@ -1629,6 +1681,7 @@ export const {
   removePackageGroup,
   addUserGroup,
   setUserGroupNameByIndex,
+  setUserGroupGidByIndex,
   removeUserGroup,
   addLanguage,
   removeLanguage,
@@ -1678,5 +1731,6 @@ export const {
   removeGroupFromUserByIndex,
   changeRedHatRepositories,
   changeFips,
+  setVerifiedLocaleLangpacks,
 } = wizardSlice.actions;
 export default wizardSlice.reducer;
