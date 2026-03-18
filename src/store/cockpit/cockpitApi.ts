@@ -668,7 +668,7 @@ export const cockpitApi = contentSourcesApi.injectEndpoints({
         },
       }),
       getComposes: builder.query<GetComposesApiResponse, GetComposesApiArg>({
-        queryFn: async () => {
+        queryFn: async (queryArgs) => {
           try {
             const blueprintsDir = await getBlueprintsPath();
             const info = await fsinfo(blueprintsDir, ['entries'], {
@@ -679,17 +679,26 @@ export const cockpitApi = contentSourcesApi.injectEndpoints({
             for (const entry of entries) {
               composes = composes.concat(await readComposes(entry[0]));
             }
+            const totalCount = composes.length;
+            const offset = queryArgs.offset ?? 0;
+            const limit = queryArgs.limit ?? 100;
+            const paginatedComposes = composes.slice(offset, offset + limit);
             return {
               data: {
                 meta: {
-                  count: composes.length,
+                  count: totalCount,
                 },
                 links: {
-                  first: composes.length > 0 ? composes[0].id : '',
+                  first:
+                    paginatedComposes.length > 0
+                      ? paginatedComposes[0].id
+                      : '',
                   last:
-                    composes.length > 0 ? composes[composes.length - 1].id : '',
+                    paginatedComposes.length > 0
+                      ? paginatedComposes[paginatedComposes.length - 1].id
+                      : '',
                 },
-                data: composes,
+                data: paginatedComposes,
               },
             };
           } catch (error) {
@@ -704,17 +713,26 @@ export const cockpitApi = contentSourcesApi.injectEndpoints({
         queryFn: async (queryArgs) => {
           try {
             const composes = await readComposes(queryArgs.id);
+            const totalCount = composes.length;
+            const offset = queryArgs.offset ?? 0;
+            const limit = queryArgs.limit ?? 100;
+            const paginatedComposes = composes.slice(offset, offset + limit);
             return {
               data: {
                 meta: {
-                  count: composes.length,
+                  count: totalCount,
                 },
                 links: {
-                  first: composes.length > 0 ? composes[0].id : '',
+                  first:
+                    paginatedComposes.length > 0
+                      ? paginatedComposes[0].id
+                      : '',
                   last:
-                    composes.length > 0 ? composes[composes.length - 1].id : '',
+                    paginatedComposes.length > 0
+                      ? paginatedComposes[paginatedComposes.length - 1].id
+                      : '',
                 },
-                data: composes,
+                data: paginatedComposes,
               },
             };
           } catch (error) {
