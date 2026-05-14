@@ -45,7 +45,7 @@ export const closePopupsIfExist = async (page: Page) => {
     page
       .locator('iframe[name="trustarc_cm"]')
       .contentFrame()
-      .getByRole('button', { name: 'Agree and proceed with' }), // closes the EU cookies popup
+      .getByRole('button', { name: 'Accept default' }),
   ];
 
   for (const locator of locatorsToCheck) {
