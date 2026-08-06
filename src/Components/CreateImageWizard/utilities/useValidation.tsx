@@ -51,6 +51,7 @@ import {
   selectImageSource,
   selectImageTypes,
   selectIsOfficialImage,
+  selectIsoPayloadReference,
   selectKernel,
   selectKeyboard,
   selectLanguages,
@@ -1277,22 +1278,42 @@ export const useImagePullValidation = (): StepValidation => {
   const isOnPremise = useAppSelector(selectIsOnPremise);
   const isOfficialImage = useAppSelector(selectIsOfficialImage);
   const imageSource = useAppSelector(selectImageSource);
+  // Only set when the container installer is selected; the installer
+  // needs its payload container in local storage too.
+  const isoPayloadReference = useAppSelector(selectIsoPayloadReference);
+
   const { data: imageExists, isLoading } = useGetImageExistsQuery(
     { reference: imageSource! },
     { skip: !isOnPremise || !isOfficialImage },
   );
+  const { data: payloadExists, isLoading: isPayloadLoading } =
+    useGetImageExistsQuery(
+      { reference: isoPayloadReference! },
+      { skip: !isOnPremise || !isOfficialImage || !isoPayloadReference },
+    );
 
   if (!isOnPremise || !isOfficialImage) {
     return { errors: {}, disabledNext: false };
   }
 
-  if (isLoading) {
+  const needsPayload = !!isoPayloadReference;
+
+  if (isLoading || (needsPayload && isPayloadLoading)) {
     return { errors: {}, disabledNext: true };
   }
 
   if (imageExists !== true) {
     return {
       errors: { imagePull: 'Image must be pulled before proceeding' },
+      disabledNext: true,
+    };
+  }
+
+  if (needsPayload && payloadExists !== true) {
+    return {
+      errors: {
+        imagePull: 'Payload container must be pulled before proceeding',
+      },
       disabledNext: true,
     };
   }

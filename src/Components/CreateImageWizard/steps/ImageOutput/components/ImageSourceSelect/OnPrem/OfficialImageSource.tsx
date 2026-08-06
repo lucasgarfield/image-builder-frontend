@@ -4,6 +4,7 @@ import {
   Button,
   Flex,
   FlexItem,
+  FormGroup,
   FormHelperText,
   HelperText,
   HelperTextItem,
@@ -26,7 +27,9 @@ import {
   selectForceShowErrors,
   selectImageSource,
   selectImageSourceType,
+  selectImageTypes,
   selectIsOfficialImage,
+  selectIsoPayloadReference,
   type SupportedImageTypes,
 } from '@/store/slices/wizard';
 
@@ -40,6 +43,11 @@ const OfficialImageSource = () => {
   const imageSourceType = useAppSelector(selectImageSourceType);
   const forceShowErrors = useAppSelector(selectForceShowErrors);
   const hasOfficialSelection = useAppSelector(selectIsOfficialImage);
+  const imageTypes = useAppSelector(selectImageTypes);
+  const isoPayloadReference = useAppSelector(selectIsoPayloadReference);
+
+  const showPayloadSelect =
+    hasOfficialSelection && imageTypes.includes('bootable-container-iso');
 
   const { data: authStatus, isLoading: isAuthLoading } =
     useGetRegistryAuthStatusQuery();
@@ -53,16 +61,40 @@ const OfficialImageSource = () => {
     return KNOWN_IMAGES.map((known) => ({ ...known, arch }));
   }, [isAuthenticated, arch]);
 
+  // The payload container is fixed by the selected installer image;
+  // the dropdown exists so its name, tag, and registry reference are
+  // visible, not to offer a choice.
+  const payloadItems = useMemo(() => {
+    const installer = images.find((img) => img.reference === selectedRef);
+    return (installer?.iso_payload_references ?? []).map((reference) => ({
+      reference,
+      name: installer!.name,
+      distro: installer!.distro,
+      arch,
+      type: 'Base image',
+    }));
+  }, [images, selectedRef, arch]);
+
   const { data: imageExists } = useGetImageExistsQuery(
     { reference: selectedRef! },
     { skip: !selectedRef },
   );
+  const { data: payloadExists } = useGetImageExistsQuery(
+    { reference: isoPayloadReference! },
+    { skip: !isoPayloadReference },
+  );
 
   const [pullImage, { isLoading: isPulling, isError: isPullError }] =
     usePullImageMutation();
+  const [
+    pullPayloadImage,
+    { isLoading: isPullingPayload, isError: isPayloadPullError },
+  ] = usePullImageMutation();
 
   const showSelectionError = forceShowErrors && !hasOfficialSelection;
   const showPullValidation = hasOfficialSelection && imageExists === false;
+  const showPayloadPullValidation =
+    showPayloadSelect && payloadExists === false;
 
   const errorId = showSelectionError
     ? 'official-image-selection-error'
@@ -118,6 +150,62 @@ const OfficialImageSource = () => {
             </FlexItem>
           )}
         </Flex>
+      )}
+      {isAuthenticated && showPayloadSelect && (
+        <FormGroup label='Payload container' className='pf-v6-u-mt-md'>
+          <Flex
+            spaceItems={{ default: 'spaceItemsMd' }}
+            alignItems={{ default: 'alignItemsFlexStart' }}
+          >
+            <FlexItem>
+              <ImageSelect
+                items={payloadItems}
+                selectedRef={isoPayloadReference}
+                onSelect={() => {}}
+                getLabel={(item) => item.name}
+                placeholder='Select a payload container'
+                isOptionDisabled={() => true}
+                ariaDescribedBy={
+                  showPayloadPullValidation
+                    ? 'payload-image-pull-error'
+                    : undefined
+                }
+              />
+            </FlexItem>
+            <FlexItem className='pf-v6-u-mt-md'>
+              <Button
+                variant='secondary'
+                onClick={() =>
+                  pullPayloadImage({ reference: isoPayloadReference! })
+                }
+                isDisabled={
+                  isAuthLoading || isPullingPayload || !isoPayloadReference
+                }
+                icon={isPullingPayload ? <Spinner size='sm' /> : undefined}
+              >
+                {isPullingPayload ? 'Pulling image...' : 'Pull latest image'}
+              </Button>
+            </FlexItem>
+          </Flex>
+          <FormHelperText>
+            <HelperText>
+              <HelperTextItem>
+                The installer deploys this base image.
+              </HelperTextItem>
+            </HelperText>
+          </FormHelperText>
+          {showPayloadPullValidation && (
+            <FormHelperText>
+              <HelperText>
+                <HelperTextItem variant='error' id='payload-image-pull-error'>
+                  {isPayloadPullError
+                    ? 'Failed to pull image. Please try again.'
+                    : 'Payload container must be pulled before proceeding.'}
+                </HelperTextItem>
+              </HelperText>
+            </FormHelperText>
+          )}
+        </FormGroup>
       )}
       {showSelectionError && (
         <FormHelperText>
