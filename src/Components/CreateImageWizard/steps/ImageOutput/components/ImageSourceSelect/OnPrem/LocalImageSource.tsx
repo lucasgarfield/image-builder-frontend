@@ -1,29 +1,37 @@
 import React from 'react';
 
 import {
-  Card,
-  CardBody,
-  CardTitle,
   ClipboardCopy,
-  Content,
+  EmptyState,
+  EmptyStateBody,
 } from '@patternfly/react-core';
+import { RocketIcon } from '@patternfly/react-icons';
 
 const LocalImageSource = () => {
   return (
-    <Card variant='secondary' className='pf-v6-u-mt-md'>
-      <CardTitle>Local image support is coming soon</CardTitle>
-      <CardBody>
-        <Content component='p'>
-          Cockpit Image Builder 10.4 will support building images from local
-          containers. Until then, use the image-builder command-line tool:
-        </Content>
-        <ClipboardCopy isReadOnly isCode hoverTip='Copy' clickTip='Copied'>
+    <EmptyState
+      variant='sm'
+      icon={RocketIcon}
+      titleText='Local image support is coming soon'
+      headingLevel='h4'
+      className='pf-v6-u-mt-md'
+    >
+      <EmptyStateBody>
+        Until support arrives in Cockpit Image Builder 10.4, build local
+        container images with the image-builder command-line tool:
+        <ClipboardCopy
+          isReadOnly
+          isCode
+          hoverTip='Copy'
+          clickTip='Copied'
+          className='pf-v6-u-mt-md'
+        >
           {
             'image-builder build qcow2 --bootc-ref localhost/my-derived-image:latest'
           }
         </ClipboardCopy>
-      </CardBody>
-    </Card>
+      </EmptyStateBody>
+    </EmptyState>
   );
 };
 
