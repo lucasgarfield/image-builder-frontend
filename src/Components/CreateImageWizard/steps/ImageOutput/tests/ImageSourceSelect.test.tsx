@@ -7,6 +7,7 @@ import {
   initialState,
   selectDistribution,
   selectImageSource as selectImageSourceState,
+  selectIsoPayloadReference,
 } from '@/store/slices/wizard';
 import { clickWithWait, createUser, renderWithRedux } from '@/test/testUtils';
 
@@ -105,6 +106,42 @@ describe('ImageSourceSelect', () => {
       await screen.findByText('Image source');
 
       expect(selectImageSourceState(store.getState())).toBeUndefined();
+    });
+
+    test('selecting a target environment first selects the matching image', async () => {
+      const { store } = renderImageSourceSelect({
+        output: {
+          ...initialState.output,
+          imageSourceType: 'official',
+          imageTypes: ['aws'],
+        },
+      });
+
+      await waitFor(() => {
+        expect(selectImageSourceState(store.getState())).toBe(
+          'registry.redhat.io/rhel10/rhel-10-ec2:latest',
+        );
+      });
+      expect(selectDistribution(store.getState())).toBe('rhel-10.3');
+    });
+
+    test('selecting the installer environment first also sets the payload', async () => {
+      const { store } = renderImageSourceSelect({
+        output: {
+          ...initialState.output,
+          imageSourceType: 'official',
+          imageTypes: ['bootable-container-iso'],
+        },
+      });
+
+      await waitFor(() => {
+        expect(selectImageSourceState(store.getState())).toBe(
+          'registry.redhat.io/rhel10/rhel-10-installer:latest',
+        );
+      });
+      expect(selectIsoPayloadReference(store.getState())).toBe(
+        'registry.redhat.io/rhel10/rhel-10-qcow2:latest',
+      );
     });
   });
 

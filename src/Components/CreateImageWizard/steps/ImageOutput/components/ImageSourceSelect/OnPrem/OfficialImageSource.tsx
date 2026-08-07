@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 
 import {
   Button,
@@ -96,6 +96,21 @@ const OfficialImageSource = () => {
     () => KNOWN_IMAGES.map((known) => ({ ...known, arch })),
     [arch],
   );
+
+  // No image is selected when the wizard opens; picking a target
+  // environment first implies the matching official image, so select
+  // it the same way the dropdown would.
+  useEffect(() => {
+    if (imageSourceType !== 'official' || selectedRef) {
+      return;
+    }
+    const match = images.find((img) => img.type === imageTypes[0]);
+    if (match) {
+      dispatch(changeImageSource(match.reference));
+      dispatch(changeDistribution(match.distro as Distributions));
+      dispatch(changeImageTypes([match.type as SupportedImageTypes]));
+    }
+  }, [imageSourceType, selectedRef, imageTypes, images, dispatch]);
 
   // The payload container is fixed by the selected installer image;
   // the dropdown exists so its name, tag, and registry reference are
