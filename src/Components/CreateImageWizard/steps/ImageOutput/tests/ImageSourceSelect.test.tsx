@@ -194,14 +194,18 @@ describe('ImageSourceSelect', () => {
       });
       await clickWithWait(user, option);
 
-      // Images can be removed outside the wizard, so the existence
-      // check must bypass the cache on every mount.
+      // Images and the registry login can change outside the wizard,
+      // so both checks must bypass the cache on every mount.
       await waitFor(() => {
         expect(mockUseGetImageExistsQuery).toHaveBeenCalledWith(
           { reference: 'registry.redhat.io/rhel10/rhel-10-qcow2:latest' },
           expect.objectContaining({ refetchOnMountOrArgChange: true }),
         );
       });
+      expect(mockUseGetRegistryAuthStatusQuery).toHaveBeenCalledWith(
+        undefined,
+        expect.objectContaining({ refetchOnMountOrArgChange: true }),
+      );
     });
 
     test('pull busy state only shows for the image being pulled', async () => {

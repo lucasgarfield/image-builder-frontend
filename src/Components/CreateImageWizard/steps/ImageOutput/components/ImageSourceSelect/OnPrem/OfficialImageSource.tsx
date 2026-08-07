@@ -87,7 +87,9 @@ const OfficialImageSource = () => {
     hasOfficialSelection && imageTypes.includes('bootable-container-iso');
 
   const { data: authStatus, isLoading: isAuthLoading } =
-    useGetRegistryAuthStatusQuery();
+    useGetRegistryAuthStatusQuery(undefined, {
+      refetchOnMountOrArgChange: true,
+    });
   const isAuthenticated = authStatus?.status === 'authenticated';
 
   const images = useMemo(
