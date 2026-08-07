@@ -29,11 +29,11 @@ const toggleStyle = {
   maxWidth: '100%',
 } as React.CSSProperties;
 
-// The selected image name alone can be ambiguous (the installer and its
-// payload share one name), so the toggle also shows the image:tag part
-// of the reference.
-const imageTag = (reference: string): string =>
-  reference.split('/').pop() ?? reference;
+const typeLabel = (item: BootcDistributionItem) => (
+  <Label color='blue' isCompact>
+    {isImageType(item.type) ? simpleTargetNames[item.type] : item.type}
+  </Label>
+);
 
 const ImageSelect = ({
   items,
@@ -68,10 +68,7 @@ const ImageSelect = ({
     >
       {selectedItem ? (
         <>
-          {getLabel(selectedItem)}{' '}
-          <span className='pf-v6-u-text-color-subtle'>
-            {imageTag(selectedItem.reference)}
-          </span>
+          {getLabel(selectedItem)} {typeLabel(selectedItem)}
         </>
       ) : (
         placeholder
@@ -100,12 +97,7 @@ const ImageSelect = ({
               description={item.reference}
               isDisabled={isOptionDisabled?.(item) ?? false}
             >
-              {getLabel(item)}{' '}
-              <Label color='blue' isCompact>
-                {isImageType(item.type)
-                  ? simpleTargetNames[item.type]
-                  : item.type}
-              </Label>
+              {getLabel(item)} {typeLabel(item)}
             </SelectOption>
           ))}
         </SelectList>

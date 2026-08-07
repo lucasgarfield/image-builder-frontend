@@ -181,7 +181,7 @@ describe('ImageSourceSelect', () => {
       );
     });
 
-    test('shows the image tag on the closed toggles', async () => {
+    test('shows the image type on the closed toggles', async () => {
       renderImageSourceSelect();
       const user = createUser();
 
@@ -191,16 +191,16 @@ describe('ImageSourceSelect', () => {
       });
       await clickWithWait(user, option);
 
-      // The bootc and payload toggles share the image name; the tag is
-      // what tells them apart.
+      // The bootc and payload toggles share the image name; the type
+      // label is what tells them apart.
       expect(
         await screen.findByRole('button', {
-          name: /rhel.*10\.3.*rhel-10-installer:latest/i,
+          name: /rhel.*10\.3.*container installer/i,
         }),
       ).toBeInTheDocument();
       expect(
         screen.getByRole('button', {
-          name: /rhel.*10\.3.*rhel-10-qcow2:latest/i,
+          name: /rhel.*10\.3.*base image/i,
         }),
       ).toBeInTheDocument();
     });
