@@ -24,6 +24,7 @@ const mockRefetch = vi.fn();
 const mockUseGetDistributionsQuery = vi.fn();
 const mockUseGetImageExistsQuery = vi.fn();
 const mockUseGetRegistryAuthStatusQuery = vi.fn();
+const mockUsePullImageMutation = vi.fn();
 const mockPullImage = vi.fn();
 
 vi.mock('@/store/api/backend', async (importOriginal) => {
@@ -36,10 +37,8 @@ vi.mock('@/store/api/backend', async (importOriginal) => {
       mockUseGetRegistryAuthStatusQuery(...args),
     useGetImageExistsQuery: (...args: unknown[]) =>
       mockUseGetImageExistsQuery(...args),
-    usePullImageMutation: () => [
-      mockPullImage,
-      { isLoading: false, isError: false },
-    ],
+    usePullImageMutation: (...args: unknown[]) =>
+      mockUsePullImageMutation(...args),
   };
 });
 
@@ -72,6 +71,10 @@ describe('ImageSourceSelect', () => {
       isError: false,
       error: undefined,
     });
+    mockUsePullImageMutation.mockReturnValue([
+      mockPullImage,
+      { isLoading: false, isError: false },
+    ]);
   });
 
   describe('Rendering', () => {
@@ -179,6 +182,50 @@ describe('ImageSourceSelect', () => {
       expect(payloadOption).toHaveTextContent(
         'registry.redhat.io/rhel10/rhel-10-qcow2:latest',
       );
+    });
+
+    test('pull busy state only shows for the image being pulled', async () => {
+      // A pull of the guest image is in flight
+      mockUsePullImageMutation.mockReturnValue([
+        mockPullImage,
+        {
+          isLoading: true,
+          isError: false,
+          originalArgs: {
+            reference: 'registry.redhat.io/rhel10/rhel-10-qcow2:latest',
+          },
+        },
+      ]);
+
+      renderImageSourceSelect();
+      const user = createUser();
+
+      await openImageSourceSelect(user);
+      const guestOption = await screen.findByRole('option', {
+        name: /red hat enterprise linux \(rhel\) 10.3.*guest image/i,
+      });
+      await clickWithWait(user, guestOption);
+
+      expect(
+        await screen.findByRole('button', { name: /pulling image/i }),
+      ).toBeInTheDocument();
+
+      // Switching to another image must not inherit the busy state
+      const toggle = screen.getByRole('button', {
+        name: /rhel.*10\.3.*guest image/i,
+      });
+      await clickWithWait(user, toggle);
+      const awsOption = await screen.findByRole('option', {
+        name: /red hat enterprise linux \(rhel\) 10.3.*aws/i,
+      });
+      await clickWithWait(user, awsOption);
+
+      expect(
+        await screen.findByRole('button', { name: /pull latest image/i }),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: /pulling image/i }),
+      ).not.toBeInTheDocument();
     });
 
     test('shows the image type on the closed toggles', async () => {

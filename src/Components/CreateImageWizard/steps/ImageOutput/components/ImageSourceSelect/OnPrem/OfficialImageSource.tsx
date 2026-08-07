@@ -118,12 +118,21 @@ const OfficialImageSource = () => {
     { skip: !isoPayloadReference },
   );
 
-  const [pullImage, { isLoading: isPulling, isError: isPullError }] =
-    usePullImageMutation();
-  const [
-    pullPayloadImage,
-    { isLoading: isPullingPayload, isError: isPayloadPullError },
-  ] = usePullImageMutation();
+  // The mutation state is scoped to the reference it was started with,
+  // so switching to another image doesn't show its busy/error state.
+  const [pullImage, pullState] = usePullImageMutation();
+  const isPulling =
+    pullState.isLoading && pullState.originalArgs?.reference === selectedRef;
+  const isPullError =
+    pullState.isError && pullState.originalArgs?.reference === selectedRef;
+
+  const [pullPayloadImage, payloadPullState] = usePullImageMutation();
+  const isPullingPayload =
+    payloadPullState.isLoading &&
+    payloadPullState.originalArgs?.reference === isoPayloadReference;
+  const isPayloadPullError =
+    payloadPullState.isError &&
+    payloadPullState.originalArgs?.reference === isoPayloadReference;
 
   const showSelectionError = forceShowErrors && !hasOfficialSelection;
   const showPullValidation = hasOfficialSelection && imageExists === false;
