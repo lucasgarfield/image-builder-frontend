@@ -1294,7 +1294,7 @@ export const useImagePullValidation = (): StepValidation => {
 
   if (imageExists !== true) {
     return {
-      errors: { imagePull: 'Image must be pulled before proceeding' },
+      errors: { imagePull: 'Bootc container must be pulled before proceeding' },
       disabledNext: true,
     };
   }

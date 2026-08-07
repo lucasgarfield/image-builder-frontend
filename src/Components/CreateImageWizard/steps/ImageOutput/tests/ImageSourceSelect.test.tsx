@@ -181,6 +181,43 @@ describe('ImageSourceSelect', () => {
       );
     });
 
+    test('labels the image dropdown as the bootc container', async () => {
+      renderImageSourceSelect();
+
+      expect(await screen.findByText('Bootc container')).toBeInTheDocument();
+    });
+
+    test('shows the bootc pull error above the payload container section', async () => {
+      // Neither the installer nor its payload exists locally
+      mockUseGetImageExistsQuery.mockReturnValue({
+        data: false,
+        isLoading: false,
+        isError: false,
+      });
+
+      renderImageSourceSelect();
+      const user = createUser();
+
+      await openImageSourceSelect(user);
+      const option = await screen.findByRole('option', {
+        name: /red hat enterprise linux \(rhel\) 10.3.*container installer/i,
+      });
+      await clickWithWait(user, option);
+
+      const bootcError = await screen.findByText(
+        /bootc container must be pulled before proceeding/i,
+      );
+      expect(
+        screen.getByText(/payload container must be pulled before proceeding/i),
+      ).toBeInTheDocument();
+
+      const payloadLabel = screen.getByText('Payload container');
+      expect(
+        bootcError.compareDocumentPosition(payloadLabel) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+    });
+
     test('requires the payload container to be pulled', async () => {
       // The installer image exists locally but its payload does not
       mockUseGetImageExistsQuery.mockImplementation(

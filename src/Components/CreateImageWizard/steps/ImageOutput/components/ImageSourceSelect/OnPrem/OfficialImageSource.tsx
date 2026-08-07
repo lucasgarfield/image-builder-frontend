@@ -143,42 +143,69 @@ const OfficialImageSource = () => {
   return (
     <>
       <RegistryAuth />
-      <Flex
-        spaceItems={{ default: 'spaceItemsMd' }}
-        alignItems={{ default: 'alignItemsFlexStart' }}
-      >
-        <FlexItem>
-          <ImageSelect
-            items={images}
-            selectedRef={selectedRef}
-            ariaDescribedBy={errorId}
-            onSelect={(_event, selection) => {
-              const selected = images.find(
-                (img) => img.reference === selection,
-              );
-              if (selected) {
-                dispatch(changeImageSource(selected.reference));
-                dispatch(changeDistribution(selected.distro as Distributions));
-                dispatch(
-                  changeImageTypes([selected.type as SupportedImageTypes]),
+      <FormGroup label='Bootc container' className='pf-v6-u-mt-md'>
+        <Flex
+          spaceItems={{ default: 'spaceItemsMd' }}
+          alignItems={{ default: 'alignItemsFlexStart' }}
+        >
+          <FlexItem>
+            <ImageSelect
+              items={images}
+              selectedRef={selectedRef}
+              ariaDescribedBy={errorId}
+              onSelect={(_event, selection) => {
+                const selected = images.find(
+                  (img) => img.reference === selection,
                 );
-              }
-            }}
-            getLabel={(item) => item.name}
-            placeholder={'Select an official image'}
-          />
-        </FlexItem>
-        {hasOfficialSelection && (
-          <FlexItem className='pf-v6-u-mt-md'>
-            <PullButton
-              onPull={() => pullImage({ reference: selectedRef! })}
-              isPulling={isPulling}
-              isAuthenticated={isAuthenticated}
-              isDisabled={isAuthLoading}
+                if (selected) {
+                  dispatch(changeImageSource(selected.reference));
+                  dispatch(
+                    changeDistribution(selected.distro as Distributions),
+                  );
+                  dispatch(
+                    changeImageTypes([selected.type as SupportedImageTypes]),
+                  );
+                }
+              }}
+              getLabel={(item) => item.name}
+              placeholder={'Select an official image'}
             />
           </FlexItem>
+          {hasOfficialSelection && (
+            <FlexItem className='pf-v6-u-mt-md'>
+              <PullButton
+                onPull={() => pullImage({ reference: selectedRef! })}
+                isPulling={isPulling}
+                isAuthenticated={isAuthenticated}
+                isDisabled={isAuthLoading}
+              />
+            </FlexItem>
+          )}
+        </Flex>
+        {showSelectionError && (
+          <FormHelperText>
+            <HelperText>
+              <HelperTextItem
+                variant='error'
+                id='official-image-selection-error'
+              >
+                Select an official image to proceed.
+              </HelperTextItem>
+            </HelperText>
+          </FormHelperText>
         )}
-      </Flex>
+        {showPullValidation && (
+          <FormHelperText>
+            <HelperText>
+              <HelperTextItem variant='error' id='official-image-pull-error'>
+                {isPullError
+                  ? 'Failed to pull image. Please try again.'
+                  : 'Bootc container must be pulled before proceeding.'}
+              </HelperTextItem>
+            </HelperText>
+          </FormHelperText>
+        )}
+      </FormGroup>
       {showPayloadSelect && (
         <FormGroup label='Payload container' className='pf-v6-u-mt-md'>
           <Flex
@@ -230,26 +257,6 @@ const OfficialImageSource = () => {
             </FormHelperText>
           )}
         </FormGroup>
-      )}
-      {showSelectionError && (
-        <FormHelperText>
-          <HelperText>
-            <HelperTextItem variant='error' id='official-image-selection-error'>
-              Select an official image to proceed.
-            </HelperTextItem>
-          </HelperText>
-        </FormHelperText>
-      )}
-      {showPullValidation && (
-        <FormHelperText>
-          <HelperText>
-            <HelperTextItem variant='error' id='official-image-pull-error'>
-              {isPullError
-                ? 'Failed to pull image. Please try again.'
-                : 'Image must be pulled before proceeding.'}
-            </HelperTextItem>
-          </HelperText>
-        </FormHelperText>
       )}
     </>
   );
