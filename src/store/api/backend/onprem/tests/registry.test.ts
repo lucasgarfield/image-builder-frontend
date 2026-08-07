@@ -197,14 +197,14 @@ describe('registryEndpoints', () => {
       mockSpawn.mockResolvedValueOnce(undefined as never);
 
       await pullImageFn(
-        { reference: 'registry.redhat.io/rhel10/rhel-kvm:latest' },
+        { reference: 'registry.redhat.io/rhel10/rhel-10-qcow2:latest' },
         createMockApi(),
         mockExtraOptions,
         mockBaseQuery,
       );
 
       expect(mockSpawn).toHaveBeenCalledWith(
-        ['podman', 'pull', 'registry.redhat.io/rhel10/rhel-kvm:latest'],
+        ['podman', 'pull', 'registry.redhat.io/rhel10/rhel-10-qcow2:latest'],
         { superuser: 'require', err: 'message' },
       );
     });
@@ -214,7 +214,7 @@ describe('registryEndpoints', () => {
       mockSpawn.mockResolvedValueOnce(undefined as never);
 
       await pullImageFn(
-        { reference: 'registry.redhat.io/rhel10/rhel-kvm:latest' },
+        { reference: 'registry.redhat.io/rhel10/rhel-10-qcow2:latest' },
         createMockApi(),
         mockExtraOptions,
         mockBaseQuery,

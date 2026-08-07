@@ -354,7 +354,7 @@ describe('TargetEnvironment', () => {
           output: {
             ...initialState.output,
             distribution: RHEL_10 as Distributions,
-            imageSource: 'registry.redhat.io/rhel10/rhel-kvm:latest',
+            imageSource: 'registry.redhat.io/rhel10/rhel-10-qcow2:latest',
             imageTypes: ['guest-image'],
             ...outputOverrides,
           },
@@ -410,7 +410,7 @@ describe('TargetEnvironment', () => {
 
       expect(selectImageTypes(store.getState())).toEqual(['aws']);
       expect(selectImageSource(store.getState())).toBe(
-        'registry.redhat.io/rhel10/rhel-aws:latest',
+        'registry.redhat.io/rhel10/rhel-10-ec2:latest',
       );
     });
 

@@ -35,14 +35,14 @@ describe('getBootcArgs', () => {
 
     expect(
       getBootcArgs({
-        reference: 'registry.redhat.io/rhel10/rhel-bootc-installer:latest',
-        iso_payload_reference: 'registry.redhat.io/rhel10/rhel10-bootc:latest',
+        reference: 'registry.redhat.io/rhel10/rhel-10-installer:latest',
+        iso_payload_reference: 'registry.redhat.io/rhel10/rhel-10-qcow2:latest',
       }),
     ).toEqual([
       '--bootc-ref',
-      'quay.io/myorg/rhel-10-bootable-container-iso:latest',
+      'quay.io/myorg/rhel-10-installer:latest',
       '--bootc-installer-payload-ref',
-      'quay.io/myorg/rhel-10-bootc:latest',
+      'quay.io/myorg/rhel-10-qcow2:latest',
     ]);
 
     vi.unstubAllEnvs();

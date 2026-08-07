@@ -214,7 +214,7 @@ describe('output reducers', () => {
         ...initialState,
         output: {
           ...initialState.output,
-          imageSource: 'registry.redhat.io/rhel10/rhel-kvm:latest',
+          imageSource: 'registry.redhat.io/rhel10/rhel-10-qcow2:latest',
           imageTypes: ['guest-image'],
         },
       };
@@ -222,7 +222,7 @@ describe('output reducers', () => {
       const result = wizardReducer(stateWithKvm, changeImageTypes(['aws']));
 
       expect(result.output.imageSource).toBe(
-        'registry.redhat.io/rhel10/rhel-aws:latest',
+        'registry.redhat.io/rhel10/rhel-10-ec2:latest',
       );
     });
 
@@ -231,7 +231,7 @@ describe('output reducers', () => {
         ...initialState,
         output: {
           ...initialState.output,
-          imageSource: 'registry.redhat.io/rhel10/rhel-aws:latest',
+          imageSource: 'registry.redhat.io/rhel10/rhel-10-ec2:latest',
           imageTypes: ['aws'],
         },
       };
@@ -239,7 +239,7 @@ describe('output reducers', () => {
       const result = wizardReducer(stateWithAws, changeImageTypes(['aws']));
 
       expect(result.output.imageSource).toBe(
-        'registry.redhat.io/rhel10/rhel-aws:latest',
+        'registry.redhat.io/rhel10/rhel-10-ec2:latest',
       );
     });
 
@@ -265,7 +265,7 @@ describe('output reducers', () => {
         ...initialState,
         output: {
           ...initialState.output,
-          imageSource: 'registry.redhat.io/rhel10/rhel-kvm:latest',
+          imageSource: 'registry.redhat.io/rhel10/rhel-10-qcow2:latest',
           imageTypes: ['guest-image'],
         },
       };
@@ -276,10 +276,10 @@ describe('output reducers', () => {
       );
 
       expect(result.output.imageSource).toBe(
-        'registry.redhat.io/rhel10/rhel-bootc-installer:latest',
+        'registry.redhat.io/rhel10/rhel-10-installer:latest',
       );
       expect(result.output.isoPayloadReference).toBe(
-        'registry.redhat.io/rhel10/rhel10-bootc:latest',
+        'registry.redhat.io/rhel10/rhel-10-qcow2:latest',
       );
     });
 
@@ -288,7 +288,7 @@ describe('output reducers', () => {
         ...initialState,
         output: {
           ...initialState.output,
-          imageSource: 'registry.redhat.io/rhel10/rhel-bootc-installer:latest',
+          imageSource: 'registry.redhat.io/rhel10/rhel-10-installer:latest',
           imageTypes: ['bootable-container-iso'],
           isoPayloadReference: 'registry.example.org/payload:latest',
         },

@@ -13,34 +13,31 @@ describe('resolveImageReference', () => {
 
   it('returns the reference unchanged without DEV_REGISTRY', () => {
     expect(
-      resolveImageReference('registry.redhat.io/rhel10/rhel-kvm:latest'),
-    ).toBe('registry.redhat.io/rhel10/rhel-kvm:latest');
+      resolveImageReference('registry.redhat.io/rhel10/rhel-10-qcow2:latest'),
+    ).toBe('registry.redhat.io/rhel10/rhel-10-qcow2:latest');
   });
 
-  it('maps known references to their development names', () => {
+  it('moves known references to the development repository path', () => {
     vi.stubEnv('DEV_REGISTRY', 'quay.io/myorg/foundry');
 
     expect(
-      resolveImageReference('registry.redhat.io/rhel10/rhel-kvm:latest'),
+      resolveImageReference('registry.redhat.io/rhel10/rhel-10-qcow2:latest'),
     ).toBe('quay.io/myorg/foundry/rhel-10-qcow2:latest');
     expect(
-      resolveImageReference('registry.redhat.io/rhel10/rhel-aws:latest'),
-    ).toBe('quay.io/myorg/foundry/rhel-10-ami:latest');
+      resolveImageReference('registry.redhat.io/rhel10/rhel-10-ec2:latest'),
+    ).toBe('quay.io/myorg/foundry/rhel-10-ec2:latest');
     expect(
       resolveImageReference(
-        'registry.redhat.io/rhel10/rhel-bootc-installer:latest',
+        'registry.redhat.io/rhel10/rhel-10-installer:latest',
       ),
-    ).toBe('quay.io/myorg/foundry/rhel-10-bootable-container-iso:latest');
-    expect(
-      resolveImageReference('registry.redhat.io/rhel10/rhel10-bootc:latest'),
-    ).toBe('quay.io/myorg/foundry/rhel-10-bootc:latest');
+    ).toBe('quay.io/myorg/foundry/rhel-10-installer:latest');
   });
 
   it('ignores trailing slashes in DEV_REGISTRY', () => {
     vi.stubEnv('DEV_REGISTRY', 'quay.io/myorg/foundry/');
 
     expect(
-      resolveImageReference('registry.redhat.io/rhel10/rhel-kvm:latest'),
+      resolveImageReference('registry.redhat.io/rhel10/rhel-10-qcow2:latest'),
     ).toBe('quay.io/myorg/foundry/rhel-10-qcow2:latest');
   });
 

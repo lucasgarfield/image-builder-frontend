@@ -125,10 +125,12 @@ describe('ImageSourceSelect', () => {
       await openImageSourceSelect(user);
 
       expect(
-        await screen.findByText('registry.redhat.io/rhel10/rhel-kvm:latest'),
+        await screen.findByText(
+          'registry.redhat.io/rhel10/rhel-10-qcow2:latest',
+        ),
       ).toBeInTheDocument();
       expect(
-        screen.getByText('registry.redhat.io/rhel10/rhel-aws:latest'),
+        screen.getByText('registry.redhat.io/rhel10/rhel-10-ec2:latest'),
       ).toBeInTheDocument();
     });
 
@@ -144,7 +146,7 @@ describe('ImageSourceSelect', () => {
 
       await waitFor(() => {
         expect(selectImageSourceState(store.getState())).toBe(
-          'registry.redhat.io/rhel10/rhel-kvm:latest',
+          'registry.redhat.io/rhel10/rhel-10-qcow2:latest',
         );
         expect(selectDistribution(store.getState())).toBe('rhel-10.3');
       });
@@ -175,7 +177,7 @@ describe('ImageSourceSelect', () => {
       });
       expect(payloadOption).toBeDisabled();
       expect(payloadOption).toHaveTextContent(
-        'registry.redhat.io/rhel10/rhel10-bootc:latest',
+        'registry.redhat.io/rhel10/rhel-10-qcow2:latest',
       );
     });
 
@@ -184,7 +186,7 @@ describe('ImageSourceSelect', () => {
       mockUseGetImageExistsQuery.mockImplementation(
         (arg: { reference: string }) => ({
           data:
-            arg.reference !== 'registry.redhat.io/rhel10/rhel10-bootc:latest',
+            arg.reference !== 'registry.redhat.io/rhel10/rhel-10-qcow2:latest',
           isLoading: false,
           isError: false,
         }),
@@ -224,7 +226,7 @@ describe('ImageSourceSelect', () => {
       await clickWithWait(user, pullButtons[1]);
 
       expect(mockPullImage).toHaveBeenCalledWith({
-        reference: 'registry.redhat.io/rhel10/rhel10-bootc:latest',
+        reference: 'registry.redhat.io/rhel10/rhel-10-qcow2:latest',
       });
     });
 
@@ -287,7 +289,7 @@ describe('ImageSourceSelect', () => {
 
       await waitFor(() => {
         expect(selectImageSourceState(store.getState())).toBe(
-          'registry.redhat.io/rhel10/rhel-kvm:latest',
+          'registry.redhat.io/rhel10/rhel-10-qcow2:latest',
         );
       });
     });
