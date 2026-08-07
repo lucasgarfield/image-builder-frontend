@@ -7,7 +7,6 @@ import {
   CardTitle,
   FormGroup,
   Gallery,
-  Label,
 } from '@patternfly/react-core';
 
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
@@ -46,7 +45,7 @@ const OnPremImageSourceSelect = () => {
             }}
           >
             <CardTitle id='official-card-title'>
-              Official Red Hat images <Label isCompact>Login required</Label>
+              Official Red Hat images
             </CardTitle>
           </CardHeader>
           <CardBody>Remote images from registry.redhat.io</CardBody>

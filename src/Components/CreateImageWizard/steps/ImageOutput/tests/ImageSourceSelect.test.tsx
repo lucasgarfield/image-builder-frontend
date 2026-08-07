@@ -23,6 +23,7 @@ import ImageSourceSelect from '../components/ImageSourceSelect';
 const mockRefetch = vi.fn();
 const mockUseGetDistributionsQuery = vi.fn();
 const mockUseGetImageExistsQuery = vi.fn();
+const mockUseGetRegistryAuthStatusQuery = vi.fn();
 const mockPullImage = vi.fn();
 
 vi.mock('@/store/api/backend', async (importOriginal) => {
@@ -31,12 +32,8 @@ vi.mock('@/store/api/backend', async (importOriginal) => {
     ...actual,
     useGetDistributionsQuery: (...args: unknown[]) =>
       mockUseGetDistributionsQuery(...args),
-    useGetRegistryAuthStatusQuery: () => ({
-      data: { status: 'authenticated', username: 'testuser' },
-      isLoading: false,
-      isError: false,
-      error: undefined,
-    }),
+    useGetRegistryAuthStatusQuery: (...args: unknown[]) =>
+      mockUseGetRegistryAuthStatusQuery(...args),
     useGetImageExistsQuery: (...args: unknown[]) =>
       mockUseGetImageExistsQuery(...args),
     usePullImageMutation: () => [
@@ -69,6 +66,12 @@ describe('ImageSourceSelect', () => {
       isLoading: false,
       isError: false,
     });
+    mockUseGetRegistryAuthStatusQuery.mockReturnValue({
+      data: { status: 'authenticated', username: 'testuser' },
+      isLoading: false,
+      isError: false,
+      error: undefined,
+    });
   });
 
   describe('Rendering', () => {
@@ -90,6 +93,7 @@ describe('ImageSourceSelect', () => {
       expect(screen.getByText('Local images')).toBeInTheDocument();
       expect(screen.queryByText('Custom images')).not.toBeInTheDocument();
       expect(screen.queryByText('No login')).not.toBeInTheDocument();
+      expect(screen.queryByText('Login required')).not.toBeInTheDocument();
     });
 
     test('does not auto-select an image on-prem', async () => {
@@ -235,6 +239,92 @@ describe('ImageSourceSelect', () => {
       await clickWithWait(user, option);
 
       expect(screen.queryByText('Payload container')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Not logged in', () => {
+    beforeEach(() => {
+      mockUseGetRegistryAuthStatusQuery.mockReturnValue({
+        data: { status: 'unauthenticated' },
+        isLoading: false,
+        isError: false,
+        error: undefined,
+      });
+    });
+
+    test('displays the login prompt instead of an empty state', async () => {
+      renderImageSourceSelect();
+
+      expect(
+        await screen.findByText(/log in to pull the latest images/i),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByText(/login to select an image/i),
+      ).not.toBeInTheDocument();
+    });
+
+    test('displays official images in the dropdown', async () => {
+      renderImageSourceSelect();
+      const user = createUser();
+
+      await openImageSourceSelect(user);
+
+      const options = await screen.findAllByRole('option', {
+        name: /red hat enterprise linux \(rhel\) 10.3/i,
+      });
+      expect(options).toHaveLength(3);
+    });
+
+    test('allows selecting an image without logging in', async () => {
+      const { store } = renderImageSourceSelect();
+      const user = createUser();
+
+      await openImageSourceSelect(user);
+      const option = await screen.findByRole('option', {
+        name: /red hat enterprise linux \(rhel\) 10.3.*guest image/i,
+      });
+      await clickWithWait(user, option);
+
+      await waitFor(() => {
+        expect(selectImageSourceState(store.getState())).toBe(
+          'registry.redhat.io/rhel10/rhel-kvm:latest',
+        );
+      });
+    });
+
+    test('disables the pull button', async () => {
+      renderImageSourceSelect();
+      const user = createUser();
+
+      await openImageSourceSelect(user);
+      const option = await screen.findByRole('option', {
+        name: /red hat enterprise linux \(rhel\) 10.3.*guest image/i,
+      });
+      await clickWithWait(user, option);
+
+      const pullButton = await screen.findByRole('button', {
+        name: /pull latest image/i,
+      });
+      expect(pullButton).toHaveAttribute('aria-disabled', 'true');
+
+      await clickWithWait(user, pullButton);
+      expect(mockPullImage).not.toHaveBeenCalled();
+    });
+
+    test('login action opens the login form', async () => {
+      renderImageSourceSelect();
+      const user = createUser();
+
+      const loginButton = await screen.findByRole('button', {
+        name: /log in/i,
+      });
+      await clickWithWait(user, loginButton);
+
+      expect(
+        await screen.findByText(/log in to registry\.redhat\.io/i),
+      ).toBeInTheDocument();
+      expect(screen.getByLabelText(/username/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
     });
   });
 

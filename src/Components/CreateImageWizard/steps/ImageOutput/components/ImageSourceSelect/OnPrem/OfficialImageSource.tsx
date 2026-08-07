@@ -9,6 +9,7 @@ import {
   HelperText,
   HelperTextItem,
   Spinner,
+  Tooltip,
 } from '@patternfly/react-core';
 
 import {
@@ -36,6 +37,42 @@ import {
 import ImageSelect from './ImageSelect';
 import RegistryAuth from './RegistryAuth';
 
+type PullButtonProps = {
+  onPull: () => void;
+  isPulling: boolean;
+  isAuthenticated: boolean;
+  isDisabled?: boolean;
+};
+
+const PullButton = ({
+  onPull,
+  isPulling,
+  isAuthenticated,
+  isDisabled,
+}: PullButtonProps) => {
+  const button = (
+    <Button
+      variant='secondary'
+      onClick={onPull}
+      isDisabled={isDisabled || isPulling}
+      isAriaDisabled={!isAuthenticated}
+      icon={isPulling ? <Spinner size='sm' /> : undefined}
+    >
+      {isPulling ? 'Pulling image...' : 'Pull latest image'}
+    </Button>
+  );
+
+  if (isAuthenticated) {
+    return button;
+  }
+
+  return (
+    <Tooltip content='Log in to registry.redhat.io to pull images.'>
+      {button}
+    </Tooltip>
+  );
+};
+
 const OfficialImageSource = () => {
   const dispatch = useAppDispatch();
   const arch = useAppSelector(selectArchitecture);
@@ -53,13 +90,10 @@ const OfficialImageSource = () => {
     useGetRegistryAuthStatusQuery();
   const isAuthenticated = authStatus?.status === 'authenticated';
 
-  const images = useMemo(() => {
-    if (!isAuthenticated) {
-      return [];
-    }
-
-    return KNOWN_IMAGES.map((known) => ({ ...known, arch }));
-  }, [isAuthenticated, arch]);
+  const images = useMemo(
+    () => KNOWN_IMAGES.map((known) => ({ ...known, arch })),
+    [arch],
+  );
 
   // The payload container is fixed by the selected installer image;
   // the dropdown exists so its name, tag, and registry reference are
@@ -109,49 +143,43 @@ const OfficialImageSource = () => {
   return (
     <>
       <RegistryAuth />
-      {isAuthenticated && (
-        <Flex
-          spaceItems={{ default: 'spaceItemsMd' }}
-          alignItems={{ default: 'alignItemsFlexStart' }}
-        >
-          <FlexItem>
-            <ImageSelect
-              items={images}
-              selectedRef={selectedRef}
-              ariaDescribedBy={errorId}
-              onSelect={(_event, selection) => {
-                const selected = images.find(
-                  (img) => img.reference === selection,
+      <Flex
+        spaceItems={{ default: 'spaceItemsMd' }}
+        alignItems={{ default: 'alignItemsFlexStart' }}
+      >
+        <FlexItem>
+          <ImageSelect
+            items={images}
+            selectedRef={selectedRef}
+            ariaDescribedBy={errorId}
+            onSelect={(_event, selection) => {
+              const selected = images.find(
+                (img) => img.reference === selection,
+              );
+              if (selected) {
+                dispatch(changeImageSource(selected.reference));
+                dispatch(changeDistribution(selected.distro as Distributions));
+                dispatch(
+                  changeImageTypes([selected.type as SupportedImageTypes]),
                 );
-                if (selected) {
-                  dispatch(changeImageSource(selected.reference));
-                  dispatch(
-                    changeDistribution(selected.distro as Distributions),
-                  );
-                  dispatch(
-                    changeImageTypes([selected.type as SupportedImageTypes]),
-                  );
-                }
-              }}
-              getLabel={(item) => item.name}
-              placeholder={'Select an official image'}
+              }
+            }}
+            getLabel={(item) => item.name}
+            placeholder={'Select an official image'}
+          />
+        </FlexItem>
+        {hasOfficialSelection && (
+          <FlexItem className='pf-v6-u-mt-md'>
+            <PullButton
+              onPull={() => pullImage({ reference: selectedRef! })}
+              isPulling={isPulling}
+              isAuthenticated={isAuthenticated}
+              isDisabled={isAuthLoading}
             />
           </FlexItem>
-          {hasOfficialSelection && (
-            <FlexItem className='pf-v6-u-mt-md'>
-              <Button
-                variant='secondary'
-                onClick={() => pullImage({ reference: selectedRef! })}
-                isDisabled={isAuthLoading || isPulling}
-                icon={isPulling ? <Spinner size='sm' /> : undefined}
-              >
-                {isPulling ? 'Pulling image...' : 'Pull latest image'}
-              </Button>
-            </FlexItem>
-          )}
-        </Flex>
-      )}
-      {isAuthenticated && showPayloadSelect && (
+        )}
+      </Flex>
+      {showPayloadSelect && (
         <FormGroup label='Payload container' className='pf-v6-u-mt-md'>
           <Flex
             spaceItems={{ default: 'spaceItemsMd' }}
@@ -173,18 +201,14 @@ const OfficialImageSource = () => {
               />
             </FlexItem>
             <FlexItem className='pf-v6-u-mt-md'>
-              <Button
-                variant='secondary'
-                onClick={() =>
+              <PullButton
+                onPull={() =>
                   pullPayloadImage({ reference: isoPayloadReference! })
                 }
-                isDisabled={
-                  isAuthLoading || isPullingPayload || !isoPayloadReference
-                }
-                icon={isPullingPayload ? <Spinner size='sm' /> : undefined}
-              >
-                {isPullingPayload ? 'Pulling image...' : 'Pull latest image'}
-              </Button>
+                isPulling={isPullingPayload}
+                isAuthenticated={isAuthenticated}
+                isDisabled={isAuthLoading || !isoPayloadReference}
+              />
             </FlexItem>
           </Flex>
           <FormHelperText>
