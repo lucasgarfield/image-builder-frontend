@@ -29,6 +29,12 @@ const toggleStyle = {
   maxWidth: '100%',
 } as React.CSSProperties;
 
+// The selected image name alone can be ambiguous (the installer and its
+// payload share one name), so the toggle also shows the image:tag part
+// of the reference.
+const imageTag = (reference: string): string =>
+  reference.split('/').pop() ?? reference;
+
 const ImageSelect = ({
   items,
   selectedRef,
@@ -60,7 +66,16 @@ const ImageSelect = ({
       style={toggleStyle}
       aria-describedby={ariaDescribedBy}
     >
-      {selectedItem ? getLabel(selectedItem) : placeholder}
+      {selectedItem ? (
+        <>
+          {getLabel(selectedItem)}{' '}
+          <span className='pf-v6-u-text-color-subtle'>
+            {imageTag(selectedItem.reference)}
+          </span>
+        </>
+      ) : (
+        placeholder
+      )}
     </MenuToggle>
   );
 

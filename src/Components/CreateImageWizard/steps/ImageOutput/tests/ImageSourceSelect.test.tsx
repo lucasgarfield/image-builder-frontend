@@ -181,6 +181,30 @@ describe('ImageSourceSelect', () => {
       );
     });
 
+    test('shows the image tag on the closed toggles', async () => {
+      renderImageSourceSelect();
+      const user = createUser();
+
+      await openImageSourceSelect(user);
+      const option = await screen.findByRole('option', {
+        name: /red hat enterprise linux \(rhel\) 10.3.*container installer/i,
+      });
+      await clickWithWait(user, option);
+
+      // The bootc and payload toggles share the image name; the tag is
+      // what tells them apart.
+      expect(
+        await screen.findByRole('button', {
+          name: /rhel.*10\.3.*rhel-10-installer:latest/i,
+        }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', {
+          name: /rhel.*10\.3.*rhel-10-qcow2:latest/i,
+        }),
+      ).toBeInTheDocument();
+    });
+
     test('labels the image dropdown as the bootc container', async () => {
       renderImageSourceSelect();
 
