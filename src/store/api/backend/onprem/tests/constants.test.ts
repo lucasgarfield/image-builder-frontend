@@ -1,6 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { getRegistryHost, resolveImageReference } from '../constants';
+import {
+  getRegistryHost,
+  getRegistrySearchPath,
+  resolveImageReference,
+} from '../constants';
 
 describe('resolveImageReference', () => {
   afterEach(() => {
@@ -13,28 +17,42 @@ describe('resolveImageReference', () => {
     ).toBe('registry.redhat.io/rhel10/rhel-kvm:latest');
   });
 
-  it('replaces the official registry with DEV_REGISTRY', () => {
-    vi.stubEnv('DEV_REGISTRY', 'quay.io/myorg');
+  it('maps known references to their development names', () => {
+    vi.stubEnv('DEV_REGISTRY', 'quay.io/myorg/foundry');
 
     expect(
       resolveImageReference('registry.redhat.io/rhel10/rhel-kvm:latest'),
-    ).toBe('quay.io/myorg/rhel10/rhel-kvm:latest');
+    ).toBe('quay.io/myorg/foundry/rhel-10-qcow2:latest');
+    expect(
+      resolveImageReference('registry.redhat.io/rhel10/rhel-aws:latest'),
+    ).toBe('quay.io/myorg/foundry/rhel-10-ami:latest');
+    expect(
+      resolveImageReference(
+        'registry.redhat.io/rhel10/rhel-bootc-installer:latest',
+      ),
+    ).toBe('quay.io/myorg/foundry/rhel-10-bootable-container-iso:latest');
+    expect(
+      resolveImageReference('registry.redhat.io/rhel10/rhel10-bootc:latest'),
+    ).toBe('quay.io/myorg/foundry/rhel-10-bootc:latest');
   });
 
   it('ignores trailing slashes in DEV_REGISTRY', () => {
-    vi.stubEnv('DEV_REGISTRY', 'quay.io/myorg/');
+    vi.stubEnv('DEV_REGISTRY', 'quay.io/myorg/foundry/');
 
     expect(
       resolveImageReference('registry.redhat.io/rhel10/rhel-kvm:latest'),
-    ).toBe('quay.io/myorg/rhel10/rhel-kvm:latest');
+    ).toBe('quay.io/myorg/foundry/rhel-10-qcow2:latest');
   });
 
-  it('leaves references from other registries untouched', () => {
-    vi.stubEnv('DEV_REGISTRY', 'quay.io/myorg');
+  it('leaves unknown references untouched', () => {
+    vi.stubEnv('DEV_REGISTRY', 'quay.io/myorg/foundry');
 
     expect(resolveImageReference('localhost/my-derived-image:latest')).toBe(
       'localhost/my-derived-image:latest',
     );
+    expect(
+      resolveImageReference('registry.redhat.io/rhel9/other-image:latest'),
+    ).toBe('registry.redhat.io/rhel9/other-image:latest');
   });
 });
 
@@ -48,7 +66,7 @@ describe('getRegistryHost', () => {
   });
 
   it('returns only the host part of DEV_REGISTRY', () => {
-    vi.stubEnv('DEV_REGISTRY', 'registry.example.com:5000/myorg');
+    vi.stubEnv('DEV_REGISTRY', 'registry.example.com:5000/myorg/foundry');
 
     expect(getRegistryHost()).toBe('registry.example.com:5000');
   });
@@ -57,5 +75,21 @@ describe('getRegistryHost', () => {
     vi.stubEnv('DEV_REGISTRY', 'registry.example.com:5000');
 
     expect(getRegistryHost()).toBe('registry.example.com:5000');
+  });
+});
+
+describe('getRegistrySearchPath', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('searches the official rhel10 path without DEV_REGISTRY', () => {
+    expect(getRegistrySearchPath()).toBe('registry.redhat.io/rhel10');
+  });
+
+  it('searches the development repository path', () => {
+    vi.stubEnv('DEV_REGISTRY', 'quay.io/myorg/foundry');
+
+    expect(getRegistrySearchPath()).toBe('quay.io/myorg/foundry');
   });
 });

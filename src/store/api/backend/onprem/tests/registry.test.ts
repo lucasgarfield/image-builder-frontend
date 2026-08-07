@@ -222,7 +222,7 @@ describe('registryEndpoints', () => {
       vi.unstubAllEnvs();
 
       expect(mockSpawn).toHaveBeenCalledWith(
-        ['podman', 'pull', 'quay.io/myorg/rhel10/rhel-kvm:latest'],
+        ['podman', 'pull', 'quay.io/myorg/rhel-10-qcow2:latest'],
         { superuser: 'require', err: 'message' },
       );
     });

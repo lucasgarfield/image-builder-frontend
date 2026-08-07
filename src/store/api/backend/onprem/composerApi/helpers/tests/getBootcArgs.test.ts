@@ -40,9 +40,9 @@ describe('getBootcArgs', () => {
       }),
     ).toEqual([
       '--bootc-ref',
-      'quay.io/myorg/rhel10/rhel-bootc-installer:latest',
+      'quay.io/myorg/rhel-10-bootable-container-iso:latest',
       '--bootc-installer-payload-ref',
-      'quay.io/myorg/rhel10/rhel10-bootc:latest',
+      'quay.io/myorg/rhel-10-bootc:latest',
     ]);
 
     vi.unstubAllEnvs();

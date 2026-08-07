@@ -2,8 +2,7 @@ import cockpit from 'cockpit';
 
 import {
   getRegistryHost,
-  OFFICIAL_REGISTRY,
-  resolveImageReference,
+  getRegistrySearchPath,
 } from '@/store/api/backend/onprem/constants';
 import type { RegistryAuthStatus } from '@/store/api/backend/onprem/types';
 
@@ -22,13 +21,7 @@ const getRegistryLogin = async (): Promise<string | null> => {
 const verifyRegistryAccess = async (): Promise<boolean> => {
   try {
     await cockpit.spawn(
-      [
-        'podman',
-        'search',
-        resolveImageReference(`${OFFICIAL_REGISTRY}/rhel10`),
-        '--limit',
-        '1',
-      ],
+      ['podman', 'search', getRegistrySearchPath(), '--limit', '1'],
       { superuser: 'require' },
     );
     return true;
