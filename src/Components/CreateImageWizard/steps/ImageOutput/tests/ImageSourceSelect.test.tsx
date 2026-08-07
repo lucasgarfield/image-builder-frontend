@@ -184,6 +184,26 @@ describe('ImageSourceSelect', () => {
       );
     });
 
+    test('re-checks image existence instead of trusting the cache', async () => {
+      renderImageSourceSelect();
+      const user = createUser();
+
+      await openImageSourceSelect(user);
+      const option = await screen.findByRole('option', {
+        name: /red hat enterprise linux \(rhel\) 10.3.*guest image/i,
+      });
+      await clickWithWait(user, option);
+
+      // Images can be removed outside the wizard, so the existence
+      // check must bypass the cache on every mount.
+      await waitFor(() => {
+        expect(mockUseGetImageExistsQuery).toHaveBeenCalledWith(
+          { reference: 'registry.redhat.io/rhel10/rhel-10-qcow2:latest' },
+          expect.objectContaining({ refetchOnMountOrArgChange: true }),
+        );
+      });
+    });
+
     test('pull busy state only shows for the image being pulled', async () => {
       // A pull of the guest image is in flight
       mockUsePullImageMutation.mockReturnValue([

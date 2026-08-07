@@ -109,13 +109,15 @@ const OfficialImageSource = () => {
     }));
   }, [images, selectedRef, arch]);
 
+  // Local images can be removed outside the wizard (e.g. podman rmi),
+  // so bypass the cache and re-check whenever this section mounts.
   const { data: imageExists } = useGetImageExistsQuery(
     { reference: selectedRef! },
-    { skip: !selectedRef },
+    { skip: !selectedRef, refetchOnMountOrArgChange: true },
   );
   const { data: payloadExists } = useGetImageExistsQuery(
     { reference: isoPayloadReference! },
-    { skip: !isoPayloadReference },
+    { skip: !isoPayloadReference, refetchOnMountOrArgChange: true },
   );
 
   // The mutation state is scoped to the reference it was started with,
