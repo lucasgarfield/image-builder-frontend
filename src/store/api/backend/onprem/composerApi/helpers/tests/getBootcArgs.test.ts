@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { getBootcArgs } from '../getBootcArgs';
 
@@ -28,5 +28,23 @@ describe('getBootcArgs', () => {
       '--bootc-installer-payload-ref',
       'quay.io/example/payload:latest',
     ]);
+  });
+
+  it('rewrites official references when DEV_REGISTRY is set', () => {
+    vi.stubEnv('DEV_REGISTRY', 'quay.io/myorg');
+
+    expect(
+      getBootcArgs({
+        reference: 'registry.redhat.io/rhel10/rhel-bootc-installer:latest',
+        iso_payload_reference: 'registry.redhat.io/rhel10/rhel10-bootc:latest',
+      }),
+    ).toEqual([
+      '--bootc-ref',
+      'quay.io/myorg/rhel10/rhel-bootc-installer:latest',
+      '--bootc-installer-payload-ref',
+      'quay.io/myorg/rhel10/rhel10-bootc:latest',
+    ]);
+
+    vi.unstubAllEnvs();
   });
 });

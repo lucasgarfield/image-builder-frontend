@@ -46,6 +46,9 @@ const registryLoginFn = endpoints.registryLogin as unknown as EndpointFn<{
   username: string;
   password: string;
 }>;
+const pullImageFn = endpoints.pullImage as unknown as EndpointFn<{
+  reference: string;
+}>;
 
 describe('registryEndpoints', () => {
   describe('getRegistryAuthStatus', () => {
@@ -137,6 +140,35 @@ describe('registryEndpoints', () => {
       );
     });
 
+    it('should log in to the development registry when DEV_REGISTRY is set', async () => {
+      vi.stubEnv('DEV_REGISTRY', 'registry.example.com:5000/myorg');
+      const mockInput = vi.fn();
+      mockSpawn.mockReturnValueOnce({
+        input: mockInput,
+      } as never);
+      mockInput.mockResolvedValueOnce(undefined);
+
+      await registryLoginFn(
+        { username: 'myuser', password: 'mypassword' },
+        createMockApi(),
+        mockExtraOptions,
+        mockBaseQuery,
+      );
+      vi.unstubAllEnvs();
+
+      expect(mockSpawn).toHaveBeenCalledWith(
+        [
+          'podman',
+          'login',
+          '--username',
+          'myuser',
+          '--password-stdin',
+          'registry.example.com:5000',
+        ],
+        { superuser: 'require', err: 'message' },
+      );
+    });
+
     it('should return an error when login fails', async () => {
       const networkError = Object.assign(new Error('network timeout'), {
         exit_status: 1,
@@ -157,6 +189,42 @@ describe('registryEndpoints', () => {
       expect(result).toEqual({
         error: { message: 'network timeout' },
       });
+    });
+  });
+
+  describe('pullImage', () => {
+    it('should pull the official reference by default', async () => {
+      mockSpawn.mockResolvedValueOnce(undefined as never);
+
+      await pullImageFn(
+        { reference: 'registry.redhat.io/rhel10/rhel-kvm:latest' },
+        createMockApi(),
+        mockExtraOptions,
+        mockBaseQuery,
+      );
+
+      expect(mockSpawn).toHaveBeenCalledWith(
+        ['podman', 'pull', 'registry.redhat.io/rhel10/rhel-kvm:latest'],
+        { superuser: 'require', err: 'message' },
+      );
+    });
+
+    it('should pull from the development registry when DEV_REGISTRY is set', async () => {
+      vi.stubEnv('DEV_REGISTRY', 'quay.io/myorg');
+      mockSpawn.mockResolvedValueOnce(undefined as never);
+
+      await pullImageFn(
+        { reference: 'registry.redhat.io/rhel10/rhel-kvm:latest' },
+        createMockApi(),
+        mockExtraOptions,
+        mockBaseQuery,
+      );
+      vi.unstubAllEnvs();
+
+      expect(mockSpawn).toHaveBeenCalledWith(
+        ['podman', 'pull', 'quay.io/myorg/rhel10/rhel-kvm:latest'],
+        { superuser: 'require', err: 'message' },
+      );
     });
   });
 });

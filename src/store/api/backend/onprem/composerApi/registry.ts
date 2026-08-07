@@ -1,5 +1,9 @@
 import cockpit from 'cockpit';
 
+import {
+  getRegistryHost,
+  resolveImageReference,
+} from '@/store/api/backend/onprem/constants';
 import { OnPremBuilder, onPremQueryHandler } from '@/store/api/shared';
 
 import { checkImageExists, checkRegistryAuth } from './helpers';
@@ -25,7 +29,7 @@ export const registryEndpoints = (builder: OnPremBuilder) => ({
               '--username',
               username,
               '--password-stdin',
-              'registry.redhat.io',
+              getRegistryHost(),
             ],
             { superuser: 'require', err: 'message' },
           )
@@ -36,22 +40,25 @@ export const registryEndpoints = (builder: OnPremBuilder) => ({
   }),
   registryLogout: builder.mutation<void, void>({
     queryFn: onPremQueryHandler(async () => {
-      await cockpit.spawn(['podman', 'logout', 'registry.redhat.io'], {
+      await cockpit.spawn(['podman', 'logout', getRegistryHost()], {
         superuser: 'require',
       });
     }),
   }),
   getImageExists: builder.query<boolean, PullImageApiArg>({
     queryFn: onPremQueryHandler(async ({ queryArgs: { reference } }) =>
-      checkImageExists(reference),
+      checkImageExists(resolveImageReference(reference)),
     ),
   }),
   pullImage: builder.mutation<void, PullImageApiArg>({
     queryFn: onPremQueryHandler(async ({ queryArgs: { reference } }) => {
-      await cockpit.spawn(['podman', 'pull', reference], {
-        superuser: 'require',
-        err: 'message',
-      });
+      await cockpit.spawn(
+        ['podman', 'pull', resolveImageReference(reference)],
+        {
+          superuser: 'require',
+          err: 'message',
+        },
+      );
     }),
   }),
 });

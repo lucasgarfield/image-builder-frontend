@@ -67,8 +67,12 @@ cockpit/download: Makefile
 
 .PHONY: cockpit/build
 cockpit/build: cockpit/download
-	npm run build:cockpit
+	DEV_REGISTRY="$(DEV_REGISTRY)" npm run build:cockpit
 
+# Set DEV_REGISTRY to redirect podman and image-builder invocations to a
+# registry holding unpublished containers, e.g.
+#   make cockpit/devel DEV_REGISTRY=quay.io/myorg
+# The UI keeps showing the official registry references.
 .PHONY: cockpit/devel
 cockpit/devel: cockpit/devel-uninstall cockpit/build cockpit/devel-install
 
