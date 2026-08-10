@@ -105,7 +105,6 @@ export {
   getHostArch,
   getHostDistro,
   useExportBlueprintCockpitQuery,
-  useGetRegistryAuthStatusQuery,
   useLazyGetImageExistsQuery,
   useGetUploadConfigQuery,
   useLazyExportBlueprintCockpitQuery,
@@ -128,6 +127,18 @@ export const useGetImageExistsQuery = (
         isFetching: false,
       })
 ) as typeof composerQueries.useGetImageExistsQuery;
+
+// Same conditional export, for the same caller.
+export const useGetRegistryAuthStatusQuery = (
+  process.env.IS_ON_PREMISE
+    ? composerQueries.useGetRegistryAuthStatusQuery
+    : () => ({
+        data: undefined,
+        isLoading: false,
+        isError: false,
+        isFetching: false,
+      })
+) as typeof composerQueries.useGetRegistryAuthStatusQuery;
 
 export { composerApi, errorMessage, imageBuilderApi };
 
