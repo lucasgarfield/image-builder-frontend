@@ -88,13 +88,18 @@ describe('hosted image mode registration', () => {
     ).toBe(true);
   });
 
-  it('uses the frontend target key rather than the backend name', () => {
+  it('respects image type capabilities even with the flag enabled', () => {
     expect(
       computeRestrictions({
-        imageTypes: { 'guest-image': { name: 'qcow2' } },
+        imageTypes: {
+          'guest-image': {
+            name: 'guest-image',
+            supported_blueprint_options: ['filesystem', 'users'],
+          },
+        },
         context,
       }).registration.shouldHide,
-    ).toBe(false);
+    ).toBe(true);
   });
 
   it('labels only supported targets in a mixed selection', () => {

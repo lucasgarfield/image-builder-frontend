@@ -113,7 +113,6 @@ export const isCustomizationSupported = (
   customization: CustomizationType,
   imageType: ImageTypeInfo | undefined,
   ctx: SupportContext,
-  imageTypeKey = imageType?.name,
 ) => {
   if (
     ctx.isOnPremise &&
@@ -124,35 +123,32 @@ export const isCustomizationSupported = (
     return false;
   }
 
-  let supportedOptions = imageType?.supported_blueprint_options;
-  if (ctx.isImageMode) {
-    const imageModeOptions = ['filesystem', 'users'];
-    // Bootc ISO and PXE builds ignore subscription options. Keep hosted
-    // registration limited to known disk targets, including while data loads.
-    if (
-      ctx.isOnPremise ||
-      (ctx.isImageModeRegistrationEnabled &&
-        imageTypeKey !== undefined &&
-        IMAGE_MODE_REGISTRATION_TARGETS.has(imageTypeKey))
-    ) {
-      imageModeOptions.push('registration');
+  if (customization === 'registration' || customization === 'aap') {
+    // Image mode derives the OS from the container, not the distribution.
+    // Hosted registration is gated until supported by the deployed backend.
+    if (ctx.isImageMode) {
+      if (
+        !ctx.isOnPremise &&
+        (!ctx.isImageModeRegistrationEnabled ||
+          !imageType ||
+          !IMAGE_MODE_REGISTRATION_TARGETS.has(imageType.name))
+      ) {
+        return false;
+      }
+    } else if (!ctx.isRhel) {
+      return false;
     }
-    supportedOptions =
-      supportedOptions?.filter((c) => imageModeOptions.includes(c)) ??
-      imageModeOptions;
   }
 
-  // only rhel distros support registration; in image mode the OS comes from
-  // the selected container image (official RHEL or custom), not the
-  // distribution, so the check doesn't apply
+  // Other package-mode customizations are not supported by bootc builds.
   if (
-    !ctx.isImageMode &&
-    !ctx.isRhel &&
-    (customization === 'registration' || customization === 'aap')
+    ctx.isImageMode &&
+    !['filesystem', 'users', 'registration'].includes(customization)
   ) {
     return false;
   }
 
+  const supportedOptions = imageType?.supported_blueprint_options;
   return !supportedOptions || supportedOptions.includes(customization);
 };
 
@@ -182,7 +178,7 @@ export const computeRestrictions = ({
     }
 
     for (const it of Object.keys(imageTypes)) {
-      if (isCustomizationSupported(customization, imageTypes[it], ctx, it)) {
+      if (isCustomizationSupported(customization, imageTypes[it], ctx)) {
         supportedOptions.add(customization);
       }
     }
@@ -287,7 +283,6 @@ export const computeImageTypeCustomizationSupport = (
           customization,
           imageTypes[it],
           context,
-          it,
         );
 
         return {
