@@ -56,6 +56,126 @@ describe('useCustomizationRestrictions hook logic', () => {
     });
   });
 
+  describe('image mode registration (hosted)', () => {
+    const hostedImageMode: SupportContext = {
+      isImageMode: true,
+      isOnPremise: false,
+      isRhel: false,
+      isImageModeRegistrationEnabled: true,
+    };
+
+    it.each(['ami', 'aws', 'gcp', 'azure', 'guest-image', 'qcow2'])(
+      'gates registration for %s on the feature flag',
+      (imageType) => {
+        for (const enabled of [false, true]) {
+          const result = computeRestrictions({
+            imageTypes: { [imageType]: { name: imageType } },
+            context: {
+              ...hostedImageMode,
+              isImageModeRegistrationEnabled: enabled,
+            },
+          });
+
+          expect(result.registration.shouldHide).toBe(!enabled);
+          expect(result.filesystem.shouldHide).toBe(false);
+          expect(result.users.shouldHide).toBe(false);
+          expect(result.packages.shouldHide).toBe(true);
+        }
+      },
+    );
+
+    it.each([
+      'bootable-container-iso',
+      'image-installer',
+      'pxe-tar-xz',
+      'network-installer',
+      'wsl',
+    ])(
+      'hides registration for %s even when metadata advertises support',
+      (imageType) => {
+        const result = computeRestrictions({
+          imageTypes: {
+            [imageType]: {
+              name: imageType,
+              supported_blueprint_options: ['registration'],
+            },
+          },
+          context: hostedImageMode,
+        });
+
+        expect(result.registration.shouldHide).toBe(true);
+      },
+    );
+
+    it('uses the metadata name when no image type key is provided', () => {
+      expect(
+        isCustomizationSupported(
+          'registration',
+          { name: 'ami' },
+          hostedImageMode,
+        ),
+      ).toBe(true);
+    });
+
+    it('prefers the selected image type key over the metadata name', () => {
+      expect(
+        isCustomizationSupported(
+          'registration',
+          { name: 'ami' },
+          hostedImageMode,
+          'bootable-container-iso',
+        ),
+      ).toBe(false);
+    });
+
+    it('hides registration when no target is known', () => {
+      expect(
+        isCustomizationSupported('registration', undefined, hostedImageMode),
+      ).toBe(false);
+    });
+
+    it('respects explicit backend customization restrictions', () => {
+      const result = computeRestrictions({
+        imageTypes: { ami: { name: 'ami', supported_blueprint_options: [] } },
+        context: hostedImageMode,
+      });
+
+      expect(result.registration.shouldHide).toBe(true);
+    });
+
+    it('reports registration support per target', () => {
+      expect(
+        computeImageTypeCustomizationSupport(
+          {
+            ami: { name: 'ami' },
+            'guest-image': { name: 'qcow2' },
+            'bootable-container-iso': { name: 'bootable-container-iso' },
+            'pxe-tar-xz': { name: 'pxe-tar-xz' },
+          },
+          'registration',
+          hostedImageMode,
+        ).map(({ supported }) => supported),
+      ).toEqual([true, true, false, false]);
+    });
+
+    it.each([false, true])(
+      'does not affect package mode with flag %s',
+      (enabled) => {
+        const result = computeRestrictions({
+          imageTypes: { 'pxe-tar-xz': { name: 'pxe-tar-xz' } },
+          context: {
+            ...hostedImageMode,
+            isImageMode: false,
+            isRhel: true,
+            isImageModeRegistrationEnabled: enabled,
+          },
+        });
+
+        expect(result.registration.shouldHide).toBe(false);
+      },
+    );
+  });
+
   describe('image mode registration (on-premise)', () => {
     const onPremImageMode: SupportContext = {
       isImageMode: true,
