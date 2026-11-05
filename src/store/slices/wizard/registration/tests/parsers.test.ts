@@ -46,6 +46,33 @@ const createMinimalExport = (
 
 describe('parseRegistrationFromRequest', () => {
   describe('edit mode (BlueprintResponse)', () => {
+    it.each([false, true])(
+      'preserves bootc registration settings with rhc=%s',
+      (rhc) => {
+        const result = parseRegistrationFromRequest(
+          createMinimalBlueprint({
+            distribution: undefined,
+            bootc: { reference: 'registry.redhat.io/rhel10/rhel-bootc:latest' },
+            customizations: {
+              subscription: {
+                organization: 123,
+                'activation-key': 'bootc-key',
+                'server-url': 'https://sub.example.com',
+                'base-url': 'https://cdn.example.com',
+                insights: true,
+                rhc,
+              },
+            },
+          }),
+        );
+        expect(result.type).toBe(
+          rhc ? 'register-now-rhc' : 'register-now-insights',
+        );
+        expect(result.activationKey).toBe('bootc-key');
+        expect(result.orgId).toBe('123');
+      },
+    );
+
     describe('registration type', () => {
       it('returns register-now-rhc when subscription has rhc enabled', () => {
         const result = parseRegistrationFromRequest(

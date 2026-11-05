@@ -17,6 +17,7 @@ import {
   selectImageTypes,
   selectIsImageMode,
 } from '@/store/slices/wizard';
+import { useFlag } from '@/Utilities/useGetEnvironment';
 
 import {
   ALL_CUSTOMIZATIONS,
@@ -93,12 +94,26 @@ export type SupportContext = {
   isImageMode: boolean;
   isOnPremise: boolean;
   isRhel: boolean;
+  isImageModeRegistrationEnabled?: boolean;
 };
+
+const IMAGE_MODE_REGISTRATION_TARGETS = new Set([
+  'guest-image',
+  'aws',
+  'ami',
+  'azure',
+  'vhd',
+  'gcp',
+  'vsphere',
+  'vsphere-ova',
+  'oci',
+]);
 
 export const isCustomizationSupported = (
   customization: CustomizationType,
   imageType: ImageTypeInfo | undefined,
   ctx: SupportContext,
+  imageTypeKey = imageType?.name,
 ) => {
   if (
     ctx.isOnPremise &&
@@ -111,13 +126,15 @@ export const isCustomizationSupported = (
 
   let supportedOptions = imageType?.supported_blueprint_options;
   if (ctx.isImageMode) {
-    // Image mode at most supports filesystem, users and registration, and
-    // might not support any customization. Registration is passed to
-    // image-builder via `--registrations`, which is only wired up
-    // on-premises so far — the hosted service (Lightspeed) can be enabled
-    // here later.
     const imageModeOptions = ['filesystem', 'users'];
-    if (ctx.isOnPremise) {
+    // Bootc ISO and PXE builds ignore subscription options. Keep hosted
+    // registration limited to known disk targets, including while data loads.
+    if (
+      ctx.isOnPremise ||
+      (ctx.isImageModeRegistrationEnabled &&
+        imageTypeKey !== undefined &&
+        IMAGE_MODE_REGISTRATION_TARGETS.has(imageTypeKey))
+    ) {
       imageModeOptions.push('registration');
     }
     supportedOptions =
@@ -165,7 +182,7 @@ export const computeRestrictions = ({
     }
 
     for (const it of Object.keys(imageTypes)) {
-      if (isCustomizationSupported(customization, imageTypes[it], ctx)) {
+      if (isCustomizationSupported(customization, imageTypes[it], ctx, it)) {
         supportedOptions.add(customization);
       }
     }
@@ -192,6 +209,9 @@ export const useCustomizationRestrictions = ({
   const arch = useAppSelector(selectArchitecture);
   const isOnPremise = useAppSelector(selectIsOnPremise);
   const isImageMode = useAppSelector(selectIsImageMode);
+  const isImageModeRegistrationEnabled = useFlag(
+    'image-builder.image-mode-registration.enabled',
+  );
 
   const { data } = useGetDistributionQuery(
     {
@@ -199,20 +219,22 @@ export const useCustomizationRestrictions = ({
       architecture: [arch],
       imageType: selectedImageTypes,
     },
-    { skip: isOnPremise },
+    { skip: isImageMode || isOnPremise },
   );
 
   const restrictions = useMemo(() => {
-    const imageTypes = isOnPremise
-      ? Object.fromEntries(
-          selectedImageTypes
-            .filter((it) => it in DISTRO_DETAILS)
-            .map((it) => [it, DISTRO_DETAILS[it]]),
-        )
-      : extractImageTypes({
-          architectures: data?.architectures,
-          arch,
-        });
+    // Package distribution metadata does not describe the selected bootc image.
+    const imageTypes =
+      isOnPremise || isImageMode
+        ? Object.fromEntries(
+            selectedImageTypes
+              .filter((it) => it in DISTRO_DETAILS)
+              .map((it) => [it, DISTRO_DETAILS[it]]),
+          )
+        : extractImageTypes({
+            architectures: data?.architectures,
+            arch,
+          });
 
     return computeRestrictions({
       imageTypes,
@@ -220,9 +242,18 @@ export const useCustomizationRestrictions = ({
         isImageMode,
         isOnPremise,
         isRhel: isRhel(distro),
+        isImageModeRegistrationEnabled,
       },
     });
-  }, [data, distro, arch, isImageMode, isOnPremise, selectedImageTypes]);
+  }, [
+    data,
+    distro,
+    arch,
+    isImageMode,
+    isOnPremise,
+    isImageModeRegistrationEnabled,
+    selectedImageTypes,
+  ]);
 
   return {
     restrictions,
@@ -256,6 +287,7 @@ export const computeImageTypeCustomizationSupport = (
           customization,
           imageTypes[it],
           context,
+          it,
         );
 
         return {
@@ -277,6 +309,9 @@ export const useImageTypeCustomizationSupport = (
   const isOnPremise = useAppSelector(selectIsOnPremise);
   const isImageMode = useAppSelector(selectIsImageMode);
   const selectedImageTypes = useAppSelector(selectImageTypes);
+  const isImageModeRegistrationEnabled = useFlag(
+    'image-builder.image-mode-registration.enabled',
+  );
 
   const { data } = useGetDistributionQuery(
     {
@@ -296,20 +331,22 @@ export const useImageTypeCustomizationSupport = (
     return [];
   }
 
-  const imageTypes = isOnPremise
-    ? Object.fromEntries(
-        selectedImageTypes
-          .filter((it) => it in DISTRO_DETAILS)
-          .map((it) => [it, DISTRO_DETAILS[it]]),
-      )
-    : extractImageTypes({
-        architectures: data?.architectures,
-        arch,
-      });
+  const imageTypes =
+    isOnPremise || isImageMode
+      ? Object.fromEntries(
+          selectedImageTypes
+            .filter((it) => it in DISTRO_DETAILS)
+            .map((it) => [it, DISTRO_DETAILS[it]]),
+        )
+      : extractImageTypes({
+          architectures: data?.architectures,
+          arch,
+        });
 
   return computeImageTypeCustomizationSupport(imageTypes, customization, {
     isImageMode,
     isOnPremise,
     isRhel: isRhel(distro),
+    isImageModeRegistrationEnabled,
   });
 };

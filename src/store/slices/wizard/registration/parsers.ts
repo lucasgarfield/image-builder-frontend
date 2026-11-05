@@ -1,5 +1,5 @@
 import { SATELLITE_PATH } from '@/constants';
-import { Customizations, Distributions } from '@/store/api/backend';
+import { Customizations } from '@/store/api/backend';
 
 import { initialState } from './state';
 import { hasSatelliteCommand, hasSubscription } from './typeguards';
@@ -30,13 +30,13 @@ const parseBaseUrl = (
 
 const parseRegistrationType = (
   customizations: Customizations,
-  distribution?: Distributions | undefined,
+  supportsRegistration: boolean,
 ): RegistrationSlice['type'] => {
   if (hasSatelliteCommand(customizations)) {
     return 'register-satellite';
   }
 
-  if (!isRhel(distribution) || !hasSubscription(customizations)) {
+  if (!supportsRegistration || !hasSubscription(customizations)) {
     return 'register-later';
   }
 
@@ -49,9 +49,9 @@ const parseRegistrationType = (
 
 const parseActivationKey = (
   customizations: Customizations,
-  distribution?: Distributions | undefined,
+  supportsRegistration: boolean,
 ): RegistrationSlice['activationKey'] => {
-  if (!isRhel(distribution) || !hasSubscription(customizations)) {
+  if (!supportsRegistration || !hasSubscription(customizations)) {
     return initialState.activationKey;
   }
 
@@ -60,9 +60,9 @@ const parseActivationKey = (
 
 const parseOrgId = (
   customizations: Customizations,
-  distribution?: Distributions | undefined,
+  supportsRegistration: boolean,
 ): RegistrationSlice['orgId'] => {
-  if (!isRhel(distribution) || !hasSubscription(customizations)) {
+  if (!supportsRegistration || !hasSubscription(customizations)) {
     return initialState.orgId;
   }
 
@@ -103,16 +103,21 @@ const parseAap = ({
 const parseRegistrationRequest = ({
   customizations,
   distribution,
-}: RequestLike): RegistrationSlice => ({
-  serverUrl: parseServerUrl(customizations),
-  baseUrl: parseBaseUrl(customizations),
-  type: parseRegistrationType(customizations, distribution),
-  activationKey: parseActivationKey(customizations, distribution),
-  orgId: parseOrgId(customizations, distribution),
-  proxy: customizations.subscription?.insights_client_proxy,
-  satelliteRegistration: parseSatellite(customizations),
-  aap: parseAap(customizations),
-});
+  bootc,
+}: RequestLike): RegistrationSlice => {
+  // Image mode derives the OS from the container, not a distribution field.
+  const supportsRegistration = bootc !== undefined || isRhel(distribution);
+  return {
+    serverUrl: parseServerUrl(customizations),
+    baseUrl: parseBaseUrl(customizations),
+    type: parseRegistrationType(customizations, supportsRegistration),
+    activationKey: parseActivationKey(customizations, supportsRegistration),
+    orgId: parseOrgId(customizations, supportsRegistration),
+    proxy: customizations.subscription?.insights_client_proxy,
+    satelliteRegistration: parseSatellite(customizations),
+    aap: parseAap(customizations),
+  };
+};
 
 const parseRegistrationBlueprint = ({
   customizations,
