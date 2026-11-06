@@ -4,7 +4,8 @@ import {
   computeImageTypeCustomizationSupport,
   computeRestrictions,
   CustomizationType,
-  DISTRO_DETAILS,
+  imageModeDetails,
+  imageModeTypeInfo,
   isCustomizationSupported,
   RestrictionStrategy,
   SupportContext,
@@ -35,18 +36,18 @@ describe('useCustomizationRestrictions hook logic', () => {
   });
 
   describe('image mode restrictions', () => {
-    it('should only allow filesystem and users customizations in image mode', () => {
+    it('should allow filesystem, users and registration for a disk target', () => {
       const result = computeRestrictionStrategy({
         isImageMode: true,
         isOnPremise: false,
+        imageType: 'guest-image',
       });
 
-      // filesystem and users should not be hidden
       expect(result.filesystem.shouldHide).toBe(false);
       expect(result.users.shouldHide).toBe(false);
+      expect(result.registration.shouldHide).toBe(false);
 
-      // All others should be hidden
-      const allowedInImageMode = ['filesystem', 'users'];
+      const allowedInImageMode = ['filesystem', 'users', 'registration'];
       const hiddenTypes = getAllCustomizationTypes().filter(
         (c) => !allowedInImageMode.includes(c),
       );
@@ -54,54 +55,113 @@ describe('useCustomizationRestrictions hook logic', () => {
         expect(result[customization].shouldHide).toBe(true);
       }
     });
+
+    it('should hide every customization until an image type is selected', () => {
+      const result = computeRestrictionStrategy({
+        isImageMode: true,
+        isOnPremise: false,
+      });
+
+      for (const customization of getAllCustomizationTypes()) {
+        expect(result[customization].shouldHide).toBe(true);
+      }
+    });
   });
 
-  describe('image mode registration (on-premise)', () => {
-    const onPremImageMode: SupportContext = {
+  describe('image mode registration', () => {
+    const imageMode: SupportContext = {
       isImageMode: true,
-      isOnPremise: true,
+      isOnPremise: false,
       isRhel: true,
     };
 
-    it('should show registration', () => {
+    const detailsFor = (imageType: 'guest-image' | 'aws' | 'gcp' | 'azure') => {
+      const details = imageModeTypeInfo(imageType);
+      if (!details) {
+        throw new Error(`missing image mode details for ${imageType}`);
+      }
+      return details;
+    };
+
+    it.each(['guest-image', 'aws', 'gcp', 'azure'] as const)(
+      'should show registration for hosted %s',
+      (imageType) => {
+        const result = computeRestrictions({
+          imageTypes: { [imageType]: detailsFor(imageType) },
+          context: imageMode,
+        });
+
+        expect(result.registration.shouldHide).toBe(false);
+        expect(result.filesystem.shouldHide).toBe(false);
+        expect(result.users.shouldHide).toBe(false);
+        expect(result.packages.shouldHide).toBe(true);
+      },
+    );
+
+    it('should show registration for on-premise disk targets', () => {
       const result = computeRestrictions({
         imageTypes: {
-          'guest-image': DISTRO_DETAILS['guest-image'],
-          aws: DISTRO_DETAILS['aws'],
+          'guest-image': detailsFor('guest-image'),
+          aws: detailsFor('aws'),
         },
-        context: onPremImageMode,
+        context: { ...imageMode, isOnPremise: true },
       });
 
       expect(result.registration.shouldHide).toBe(false);
     });
 
-    it('should hide registration for the container installer', () => {
-      const result = computeRestrictions({
-        imageTypes: {
-          'bootable-container-iso': DISTRO_DETAILS['bootable-container-iso'],
-        },
-        context: onPremImageMode,
-      });
+    it.each([false, true])(
+      'should hide registration for the container installer (on-premise=%s)',
+      (isOnPremise) => {
+        const iso = imageModeTypeInfo('bootable-container-iso');
+        if (!iso) {
+          throw new Error('missing image mode details for the installer');
+        }
+        const result = computeRestrictions({
+          imageTypes: { 'bootable-container-iso': iso },
+          context: { ...imageMode, isOnPremise },
+        });
 
-      expect(result.registration.shouldHide).toBe(true);
+        expect(result.registration.shouldHide).toBe(true);
+        expect(result.filesystem.shouldHide).toBe(true);
+        expect(result.users.shouldHide).toBe(true);
+      },
+    );
+
+    it('should use the image mode lists for the hosted bootc targets', () => {
+      const details = imageModeDetails([
+        'aws',
+        'gcp',
+        'azure',
+        'guest-image',
+        'bootable-container-iso',
+        'image-installer',
+      ]);
+
+      expect(Object.keys(details).sort()).toEqual([
+        'aws',
+        'azure',
+        'bootable-container-iso',
+        'gcp',
+        'guest-image',
+      ]);
+      expect(details.aws.supported_blueprint_options).toEqual([
+        'filesystem',
+        'users',
+        'registration',
+      ]);
+      expect(
+        details['bootable-container-iso'].supported_blueprint_options,
+      ).toEqual([]);
     });
 
     it('should show registration for non-RHEL custom images', () => {
       const result = computeRestrictions({
-        imageTypes: { 'guest-image': DISTRO_DETAILS['guest-image'] },
-        context: { ...onPremImageMode, isRhel: false },
+        imageTypes: { 'guest-image': detailsFor('guest-image') },
+        context: { ...imageMode, isRhel: false, isOnPremise: true },
       });
 
       expect(result.registration.shouldHide).toBe(false);
-    });
-
-    it('should keep registration hidden in hosted image mode', () => {
-      const result = computeRestrictions({
-        imageTypes: { 'guest-image': DISTRO_DETAILS['guest-image'] },
-        context: { ...onPremImageMode, isOnPremise: false },
-      });
-
-      expect(result.registration.shouldHide).toBe(true);
     });
   });
 
@@ -170,13 +230,13 @@ describe('useCustomizationRestrictions hook logic', () => {
       const result = computeRestrictionStrategy({
         isImageMode: true,
         isOnPremise: true,
+        imageType: 'guest-image',
       });
 
-      // Image mode allows filesystem and users (image mode takes precedence)
       expect(result.filesystem.shouldHide).toBe(false);
       expect(result.users.shouldHide).toBe(false);
+      expect(result.registration.shouldHide).toBe(false);
 
-      // Everything else should be hidden by image mode
       expect(result.packages.shouldHide).toBe(true);
       expect(result.repositories.shouldHide).toBe(true);
       expect(result.firstboot.shouldHide).toBe(true);
@@ -343,28 +403,28 @@ describe('isCustomizationSupported', () => {
       isRhel: true,
     };
 
-    it('should only allow filesystem and users in image mode', () => {
-      expect(
-        isCustomizationSupported('filesystem', undefined, imageModeCxt),
-      ).toBe(true);
-      expect(isCustomizationSupported('users', undefined, imageModeCxt)).toBe(
+    it('should follow the image mode option list for a disk target', () => {
+      const disk = imageModeTypeInfo('guest-image');
+      expect(isCustomizationSupported('filesystem', disk, imageModeCxt)).toBe(
         true,
+      );
+      expect(isCustomizationSupported('users', disk, imageModeCxt)).toBe(true);
+      expect(
+        isCustomizationSupported('registration', disk, imageModeCxt),
+      ).toBe(true);
+      expect(isCustomizationSupported('packages', disk, imageModeCxt)).toBe(
+        false,
       );
     });
 
-    it('should hide other customizations in image mode', () => {
-      expect(
-        isCustomizationSupported('packages', undefined, imageModeCxt),
-      ).toBe(false);
-      expect(isCustomizationSupported('kernel', undefined, imageModeCxt)).toBe(
+    it('should hide registration for the container installer', () => {
+      const iso = imageModeTypeInfo('bootable-container-iso');
+      expect(isCustomizationSupported('registration', iso, imageModeCxt)).toBe(
         false,
       );
-      expect(
-        isCustomizationSupported('repositories', undefined, imageModeCxt),
-      ).toBe(false);
-      expect(
-        isCustomizationSupported('registration', undefined, imageModeCxt),
-      ).toBe(false);
+      expect(isCustomizationSupported('filesystem', iso, imageModeCxt)).toBe(
+        false,
+      );
     });
   });
 
@@ -551,33 +611,28 @@ describe('isCustomizationSupported', () => {
   });
 
   describe('precedence rules', () => {
-    it('should apply image mode restrictions before other restrictions', () => {
+    it('should still block repositories on premise in image mode', () => {
       const imageModeOnPremiseCtx: SupportContext = {
         isImageMode: true,
         isOnPremise: true,
         isRhel: true,
       };
+      const imageType: ImageTypeInfo = {
+        name: 'guest-image',
+        supported_blueprint_options: ['filesystem', 'repositories'],
+      };
 
-      // In image mode, only filesystem and users are allowed
-      // even though on-premise would block other things
       expect(
         isCustomizationSupported(
           'filesystem',
-          undefined,
+          imageType,
           imageModeOnPremiseCtx,
         ),
       ).toBe(true);
       expect(
-        isCustomizationSupported('users', undefined, imageModeOnPremiseCtx),
-      ).toBe(true);
-      expect(
-        isCustomizationSupported('packages', undefined, imageModeOnPremiseCtx),
-      ).toBe(false);
-      // repositories would be blocked by both image mode and on-premise
-      expect(
         isCustomizationSupported(
           'repositories',
-          undefined,
+          imageType,
           imageModeOnPremiseCtx,
         ),
       ).toBe(false);
@@ -841,52 +896,47 @@ describe('computeImageTypeCustomizationSupport', () => {
       expect(packagesResult[0].supported).toBe(true);
     });
 
-    it('should respect image mode restrictions', () => {
+    it('should respect image mode option lists', () => {
       const imageModeCtx: SupportContext = {
         isImageMode: true,
         isOnPremise: false,
         isRhel: true,
       };
+      const aws = imageModeTypeInfo('aws');
+      if (!aws) {
+        throw new Error('missing image mode details for aws');
+      }
 
-      const imageTypes: Record<string, ImageTypeInfo> = {
-        aws: {
-          name: 'aws',
-          supported_blueprint_options: [
-            'filesystem',
-            'users',
-            'packages',
-            'kernel',
-          ],
-        },
-      };
+      const imageTypes: Record<string, ImageTypeInfo> = { aws };
 
-      const filesystemResult = computeImageTypeCustomizationSupport(
-        imageTypes,
-        'filesystem',
-        imageModeCtx,
-      );
-      expect(filesystemResult[0].supported).toBe(true);
-
-      const usersResult = computeImageTypeCustomizationSupport(
-        imageTypes,
-        'users',
-        imageModeCtx,
-      );
-      expect(usersResult[0].supported).toBe(true);
-
-      const packagesResult = computeImageTypeCustomizationSupport(
-        imageTypes,
-        'packages',
-        imageModeCtx,
-      );
-      expect(packagesResult[0].supported).toBe(false);
-
-      const kernelResult = computeImageTypeCustomizationSupport(
-        imageTypes,
-        'kernel',
-        imageModeCtx,
-      );
-      expect(kernelResult[0].supported).toBe(false);
+      expect(
+        computeImageTypeCustomizationSupport(
+          imageTypes,
+          'filesystem',
+          imageModeCtx,
+        )[0].supported,
+      ).toBe(true);
+      expect(
+        computeImageTypeCustomizationSupport(
+          imageTypes,
+          'registration',
+          imageModeCtx,
+        )[0].supported,
+      ).toBe(true);
+      expect(
+        computeImageTypeCustomizationSupport(
+          imageTypes,
+          'packages',
+          imageModeCtx,
+        )[0].supported,
+      ).toBe(false);
+      expect(
+        computeImageTypeCustomizationSupport(
+          imageTypes,
+          'kernel',
+          imageModeCtx,
+        )[0].supported,
+      ).toBe(false);
     });
   });
 

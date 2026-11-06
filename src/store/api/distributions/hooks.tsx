@@ -22,6 +22,7 @@ import {
   ALL_CUSTOMIZATIONS,
   BACKEND_TO_FRONTEND_OPTIONS,
   DISTRO_DETAILS,
+  imageModeTypeInfo,
 } from './constants';
 import { CustomizationType, RestrictionStrategy } from './types';
 
@@ -89,6 +90,49 @@ export const extractImageTypes = ({
   return normalized;
 };
 
+// Hardcoded until the distributions API can return bootc image-type options.
+// Types without an image-mode definition are omitted, which hides every step.
+export const imageModeDetails = (
+  imageTypes: ImageTypes[],
+): Record<string, ImageTypeInfo> =>
+  Object.fromEntries(
+    imageTypes.flatMap((imageType) => {
+      const details = imageModeTypeInfo(imageType);
+      return details ? [[imageType, details]] : [];
+    }),
+  );
+
+const onPremiseDetails = (
+  imageTypes: ImageTypes[],
+): Record<string, ImageTypeInfo> =>
+  Object.fromEntries(
+    imageTypes
+      .filter((it) => it in DISTRO_DETAILS)
+      .map((it) => [it, DISTRO_DETAILS[it]]),
+  );
+
+const restrictionImageTypes = ({
+  isImageMode,
+  isOnPremise,
+  selectedImageTypes,
+  architectures,
+  arch,
+}: {
+  isImageMode: boolean;
+  isOnPremise: boolean;
+  selectedImageTypes: ImageTypes[];
+  architectures: Record<string, ArchitectureInfo> | undefined;
+  arch: string;
+}): Record<string, ImageTypeInfo> => {
+  if (isImageMode) {
+    return imageModeDetails(selectedImageTypes);
+  }
+  if (isOnPremise) {
+    return onPremiseDetails(selectedImageTypes);
+  }
+  return extractImageTypes({ architectures, arch });
+};
+
 export type SupportContext = {
   isImageMode: boolean;
   isOnPremise: boolean;
@@ -109,21 +153,7 @@ export const isCustomizationSupported = (
     return false;
   }
 
-  let supportedOptions = imageType?.supported_blueprint_options;
-  if (ctx.isImageMode) {
-    // Image mode at most supports filesystem, users and registration, and
-    // might not support any customization. Registration is passed to
-    // image-builder via `--registrations`, which is only wired up
-    // on-premises so far — the hosted service (Lightspeed) can be enabled
-    // here later.
-    const imageModeOptions = ['filesystem', 'users'];
-    if (ctx.isOnPremise) {
-      imageModeOptions.push('registration');
-    }
-    supportedOptions =
-      supportedOptions?.filter((c) => imageModeOptions.includes(c)) ??
-      imageModeOptions;
-  }
+  const supportedOptions = imageType?.supported_blueprint_options;
 
   // only rhel distros support registration; in image mode the OS comes from
   // the selected container image (official RHEL or custom), not the
@@ -144,6 +174,7 @@ export type ComputeRestrictionsArgs = {
   context: SupportContext;
 };
 
+// TODO I think this should only take in an imageType now - we no longer support multiple image types?
 export const computeRestrictions = ({
   imageTypes,
   context: ctx,
@@ -157,8 +188,10 @@ export const computeRestrictions = ({
     const supportedOptions: Set<string> = new Set();
 
     // This covers the default case at the beginning of the wizard
-    // when the user hasn't selected any image types yet
-    if (Object.keys(imageTypes).length === 0) {
+    // when the user hasn't selected any image types yet. Image mode has no
+    // such default: a disk target and the installer ISO support different
+    // steps, so nothing is shown until one is selected.
+    if (Object.keys(imageTypes).length === 0 && !ctx.isImageMode) {
       if (isCustomizationSupported(customization, undefined, ctx)) {
         supportedOptions.add(customization);
       }
@@ -199,23 +232,20 @@ export const useCustomizationRestrictions = ({
       architecture: [arch],
       imageType: selectedImageTypes,
     },
-    { skip: isOnPremise },
+    // Image mode does not consult this response. The distributions API returns
+    // the package-mode definition for the shared type name (e.g. aws → ami).
+    { skip: isOnPremise || isImageMode },
   );
 
   const restrictions = useMemo(() => {
-    const imageTypes = isOnPremise
-      ? Object.fromEntries(
-          selectedImageTypes
-            .filter((it) => it in DISTRO_DETAILS)
-            .map((it) => [it, DISTRO_DETAILS[it]]),
-        )
-      : extractImageTypes({
-          architectures: data?.architectures,
-          arch,
-        });
-
     return computeRestrictions({
-      imageTypes,
+      imageTypes: restrictionImageTypes({
+        isImageMode,
+        isOnPremise,
+        selectedImageTypes,
+        architectures: data?.architectures,
+        arch,
+      }),
       context: {
         isImageMode,
         isOnPremise,
@@ -296,20 +326,19 @@ export const useImageTypeCustomizationSupport = (
     return [];
   }
 
-  const imageTypes = isOnPremise
-    ? Object.fromEntries(
-        selectedImageTypes
-          .filter((it) => it in DISTRO_DETAILS)
-          .map((it) => [it, DISTRO_DETAILS[it]]),
-      )
-    : extractImageTypes({
-        architectures: data?.architectures,
-        arch,
-      });
-
-  return computeImageTypeCustomizationSupport(imageTypes, customization, {
-    isImageMode,
-    isOnPremise,
-    isRhel: isRhel(distro),
-  });
+  return computeImageTypeCustomizationSupport(
+    restrictionImageTypes({
+      isImageMode,
+      isOnPremise,
+      selectedImageTypes,
+      architectures: data?.architectures,
+      arch,
+    }),
+    customization,
+    {
+      isImageMode,
+      isOnPremise,
+      isRhel: isRhel(distro),
+    },
+  );
 };

@@ -1,4 +1,4 @@
-import { ImageTypeInfo } from '@/store/api/backend';
+import { ImageTypeInfo, ImageTypes } from '@/store/api/backend';
 
 import { CustomizationType } from './types';
 
@@ -44,23 +44,48 @@ export const BACKEND_TO_FRONTEND_OPTIONS: Record<
   'customizations.files': ['firstboot', 'aap'],
 };
 
-export const DISTRO_DETAILS: Record<string, ImageTypeInfo> = {
+// Image mode and package mode share image type names, but not image-builder
+// definitions. The distributions API only returns the package-mode list, and it
+// does not describe bootc registration (`--registrations` / subscription),
+// which is not a blueprint option. Until composer can return the bootc lists,
+// image mode reads this hardcoded set instead.
+//
+// Values are frontend customization names. `filesystem` is the wizard step;
+// the bootc disk builders implement that as `customizations.disk`.
+export const IMAGE_MODE_DISK_OPTIONS = [
+  'filesystem',
+  'users',
+  'registration',
+] as const satisfies readonly CustomizationType[];
+
+export type DistroDetails = ImageTypeInfo & {
+  image_mode_supported_blueprint_options?: readonly CustomizationType[];
+};
+
+export const DISTRO_DETAILS: Record<string, DistroDetails> = {
   aws: {
     name: 'aws',
     supported_blueprint_options: [...ALL_CUSTOMIZATIONS],
+    image_mode_supported_blueprint_options: IMAGE_MODE_DISK_OPTIONS,
   },
   azure: {
     name: 'azure',
     supported_blueprint_options: [...ALL_CUSTOMIZATIONS],
+    image_mode_supported_blueprint_options: IMAGE_MODE_DISK_OPTIONS,
   },
   vhd: {
     name: 'vhd',
     supported_blueprint_options: [...ALL_CUSTOMIZATIONS],
   },
-  gcp: { name: 'gcp', supported_blueprint_options: [...ALL_CUSTOMIZATIONS] },
+  gcp: {
+    name: 'gcp',
+    supported_blueprint_options: [...ALL_CUSTOMIZATIONS],
+    image_mode_supported_blueprint_options: IMAGE_MODE_DISK_OPTIONS,
+  },
   'guest-image': {
     name: 'guest-image',
     supported_blueprint_options: [...ALL_CUSTOMIZATIONS],
+    image_mode_supported_blueprint_options: IMAGE_MODE_DISK_OPTIONS,
   },
   'image-installer': {
     name: 'image-installer',
@@ -71,7 +96,10 @@ export const DISTRO_DETAILS: Record<string, ImageTypeInfo> = {
   },
   'bootable-container-iso': {
     name: 'bootable-container-iso',
+    // Neither package mode nor the bootc ISO builders apply registration or
+    // filesystem customizations. An empty list hides every step.
     supported_blueprint_options: [],
+    image_mode_supported_blueprint_options: [],
   },
   vsphere: {
     name: 'vsphere',
@@ -106,4 +134,25 @@ export const DISTRO_DETAILS: Record<string, ImageTypeInfo> = {
       ...ALL_CUSTOMIZATIONS.filter((c) => c !== 'filesystem'),
     ],
   },
+};
+
+// Image-mode capability lookup. Returns undefined for types we do not build
+// from a bootc container, so the caller can tell "no image mode definition"
+// apart from "defined, and it supports nothing" (the installer ISO).
+export const imageModeTypeInfo = (
+  imageType: ImageTypes,
+): DistroDetails | undefined => {
+  if (!(imageType in DISTRO_DETAILS)) {
+    return undefined;
+  }
+  const details = DISTRO_DETAILS[imageType];
+  const options = details.image_mode_supported_blueprint_options;
+  // An empty list is a real definition; a missing field is not.
+  if (options === undefined) {
+    return undefined;
+  }
+  return {
+    ...details,
+    supported_blueprint_options: [...options],
+  };
 };
